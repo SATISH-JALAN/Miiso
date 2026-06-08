@@ -1,0 +1,6 @@
+{
+  "name": "Miiso",
+  "description": "Autonomous on-chain DeFi security agent that protects user wallets 24/7.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
