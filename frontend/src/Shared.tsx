@@ -7,17 +7,17 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function WordsPullUp({ text, className, showAsterisk, style }: { text: string, className?: string, showAsterisk?: boolean, style?: React.CSSProperties }) {
+export function WordsPullUp({ text, className, showAsterisk }: { text: string, className?: string, showAsterisk?: boolean }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-10%" });
   const words = text.split(" ");
 
   return (
-    <span ref={ref} className={cn("inline-flex flex-wrap", className)} style={style}>
+    <span ref={ref} className={cn("inline-flex flex-wrap", className)}>
       {words.map((word, i) => {
         const isLast = i === words.length - 1;
         return (
-          <span key={i} className="overflow-hidden inline-flex relative pb-[0.2em] -mb-[0.2em] -mr-[0.05em]">
+          <span key={i} className="overflow-hidden inline-flex relative pb-[0.2em] mb-[-0.2em] mr-[-0.05em]">
             <motion.span
               initial={{ y: "100%" }}
               animate={isInView ? { y: 0 } : { y: "100%" }}
@@ -26,7 +26,7 @@ export function WordsPullUp({ text, className, showAsterisk, style }: { text: st
             >
               {word}
               {isLast && showAsterisk && (
-                <span className="absolute top-[0.4em] -right-[0.3em] text-[0.31em]">*</span>
+                <span className="absolute top-[0.4em] right-[-0.3em] text-[0.31em]">*</span>
               )}
             </motion.span>
           </span>
@@ -51,7 +51,7 @@ export function WordsPullUpMultiStyle({ segments, className }: { segments: {text
   return (
     <div ref={ref} className={cn("inline-flex flex-wrap justify-center", className)}>
       {wordsWithStyle.map((item, i) => (
-        <span key={i} className="overflow-hidden inline-flex pb-[0.2em] -mb-[0.2em]">
+        <span key={i} className="overflow-hidden inline-flex pb-[0.2em] mb-[-0.2em]">
           <motion.span
             initial={{ y: "100%" }}
             animate={isInView ? { y: 0 } : { y: "100%" }}

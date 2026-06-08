@@ -29,7 +29,7 @@ export function Setup() {
                 <Wallet className="w-8 h-8 text-[#E1E0CC]" />
               </div>
               <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Connect Wallet</h2>
-              <p className="text-[#DEDBC8] opacity-70 mb-8 max-w-sm">Connect your MetaMask wallet to begin setup.</p>
+              <p className="text-primary opacity-70 mb-8 max-w-sm">Connect your MetaMask wallet to begin setup.</p>
               
               <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-8 w-full text-left">
                 <p className="text-sm text-gray-400">Notice: 0 ETH detected in wallet.</p>
@@ -57,7 +57,7 @@ export function Setup() {
                 <Shield className="w-8 h-8 text-[#E1E0CC]" />
               </div>
               <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Smart Account Upgrade</h2>
-              <p className="text-[#DEDBC8] opacity-70 mb-8 max-w-sm">
+              <p className="text-primary opacity-70 mb-8 max-w-sm">
                 Miiso upgrades your wallet to a MetaMask Smart Account using ERC-7715. This is a one-time $0.01 USDC transaction.
               </p>
               
@@ -79,7 +79,7 @@ export function Setup() {
               className="flex flex-col items-center text-center"
             >
               <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Grant Permission</h2>
-              <p className="text-[#DEDBC8] opacity-70 mb-8 max-w-sm">
+              <p className="text-primary opacity-70 mb-8 max-w-sm">
                 This is the only permission Miiso will ever have. You can revoke it instantly from this page at any time.
               </p>
               

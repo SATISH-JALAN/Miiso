@@ -67,12 +67,14 @@ export function HorizontalScroll() {
 
       <div
         ref={stripRef}
-        className="flex gap-[24px] px-[48px] items-center h-full w-max mt-20"
+        className="flex gap-6 px-12 items-center h-full w-max mt-20"
       >
         {/* Card 1 */}
         <div
-          ref={(el) => (cardsRef.current[0] = el)}
-          className="w-[380px] h-[420px] bg-brand-surface border border-brand-border rounded-2xl card-inner flex flex-col justify-between shrink-0"
+          ref={(el) => {
+            cardsRef.current[0] = el;
+          }}
+          className="w-95 h-105 bg-brand-surface border border-brand-border rounded-2xl card-inner flex flex-col justify-between shrink-0"
         >
           <div>
             <div className="flex items-center gap-4 mb-6">
@@ -99,8 +101,10 @@ export function HorizontalScroll() {
 
         {/* Card 2 */}
         <div
-          ref={(el) => (cardsRef.current[1] = el)}
-          className="w-[380px] h-[420px] bg-brand-surface border border-brand-border rounded-2xl card-inner flex flex-col justify-between shrink-0"
+          ref={(el) => {
+            cardsRef.current[1] = el;
+          }}
+          className="w-95 h-105 bg-brand-surface border border-brand-border rounded-2xl card-inner flex flex-col justify-between shrink-0"
         >
           <div>
             <div className="flex items-center gap-4 mb-6">
@@ -130,8 +134,10 @@ export function HorizontalScroll() {
 
         {/* Card 3 */}
         <div
-          ref={(el) => (cardsRef.current[2] = el)}
-          className="w-[380px] h-[420px] bg-brand-surface border border-brand-border rounded-2xl card-inner flex flex-col justify-between shrink-0"
+          ref={(el) => {
+            cardsRef.current[2] = el;
+          }}
+          className="w-95 h-105 bg-brand-surface border border-brand-border rounded-2xl card-inner flex flex-col justify-between shrink-0"
         >
           <div>
             <div className="flex items-center gap-4 mb-6">
@@ -170,8 +176,10 @@ export function HorizontalScroll() {
 
         {/* Card 4 */}
         <div
-          ref={(el) => (cardsRef.current[3] = el)}
-          className="relative w-[380px] h-[420px] rounded-2xl border border-brand-border overflow-hidden shrink-0 flex flex-col justify-between"
+          ref={(el) => {
+            cardsRef.current[3] = el;
+          }}
+          className="relative w-95 h-105 rounded-2xl border border-brand-border overflow-hidden shrink-0 flex flex-col justify-between"
         >
           {/* Split background */}
           <div className="absolute inset-0 z-0 flex">
@@ -179,7 +187,7 @@ export function HorizontalScroll() {
             <div className="w-1/2 h-full bg-[#10B981]/5"></div>
           </div>
 
-          <div className="relative z-10 p-[28px] h-full flex flex-col justify-between">
+          <div className="relative z-10 p-7 h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-4 mb-6">
                 <span className="font-mono text-[12px] text-[#71717A]">
@@ -195,7 +203,7 @@ export function HorizontalScroll() {
             </div>
 
             <div className="mb-4 text-center">
-              <p className="text-[64px] font-[800] text-[#10B981] leading-none mb-4 drop-shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+              <p className="text-[64px] font-extrabold text-[#10B981] leading-none mb-4 drop-shadow-[0_0_30px_rgba(16,185,129,0.2)]">
                 $0
               </p>
               <p className="text-[14px] text-text-secondary font-medium tracking-wide">
@@ -210,7 +218,7 @@ export function HorizontalScroll() {
         </div>
 
         {/* Padding element for proper scrolling endpoint */}
-        <div className="w-[48px] shrink-0"></div>
+        <div className="w-12 shrink-0"></div>
       </div>
     </section>
   );

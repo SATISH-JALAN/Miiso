@@ -57,6 +57,7 @@ export function Settings() {
                   min="2" max="20" step="1" 
                   value={budget} 
                   onChange={(e) => setBudget(Number(e.target.value))}
+                  aria-label="Scanning budget cap"
                   className="w-full accent-[#19C978]" 
                 />
                 <div className="flex justify-between text-xs text-gray-600 mt-2 font-mono">
@@ -125,7 +126,7 @@ export function Settings() {
                      setNewAddress('');
                   }
                 }}
-                className="bg-[#DEDBC8] text-black px-4 rounded-lg text-sm font-medium hover:bg-white transition-colors"
+                className="bg-primary text-black px-4 rounded-lg text-sm font-medium hover:bg-white transition-colors"
               >
                 Add
               </button>

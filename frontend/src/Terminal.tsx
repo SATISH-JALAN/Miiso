@@ -82,23 +82,22 @@ export function Terminal() {
       className="section-padding bg-brand-bg relative z-10 border-t border-brand-border"
     >
       <div className="container-content text-center mb-16">
-        <span className="font-mono text-[11px] text-[#19C978] uppercase tracking-[0.1em] font-bold block mb-4">
+        <span className="font-mono text-[11px] text-[#19C978] uppercase tracking-widest font-bold block mb-4">
           See it happen
         </span>
-        <h2 className="text-[44px] font-[700] text-text-primary leading-[1.1] tracking-tight whitespace-pre-line">
+        <h2 className="text-[44px] font-bold text-text-primary leading-[1.1] tracking-tight whitespace-pre-line">
           {"Real protection.\nReal time."}
         </h2>
       </div>
-
-      <div className="max-w-[720px] mx-auto w-full">
+      <div className="max-w-180 mx-auto w-full">
         {/* Terminal Card */}
-        <div className="bg-[#0A0A0A] rounded-[16px] border border-brand-border overflow-hidden shadow-2xl">
+        <div className="bg-[#0A0A0A] rounded-2xl border border-brand-border overflow-hidden shadow-2xl">
           {/* Top Bar */}
-          <div className="bg-[#0F0F0F] border-b border-brand-border flex items-center px-4 h-[40px] relative">
+          <div className="bg-[#0F0F0F] border-b border-brand-border flex items-center px-4 h-10 relative">
             <div className="flex gap-2 absolute left-4">
-              <div className="w-[10px] h-[10px] rounded-full bg-[#EF4444]" />
-              <div className="w-[10px] h-[10px] rounded-full bg-[#F59E0B]" />
-              <div className="w-[10px] h-[10px] rounded-full bg-[#10B981]" />
+              <div className="w-2.5 h-2.5 rounded-full bg-[#EF4444]" />
+              <div className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
+              <div className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
             </div>
             <div className="flex-1 text-center font-mono text-[12px] text-text-secondary">
               miiso — protection log
@@ -109,7 +108,9 @@ export function Terminal() {
           <div className="p-6 font-mono text-[13px] leading-[1.8] text-left">
             {/* Line 1 */}
             <div
-              ref={(el) => (linesRef.current[0] = el)}
+              ref={(el) => {
+                linesRef.current[0] = el;
+              }}
               className="flex justify-between"
             >
               <span className="text-[#10B981]">
@@ -121,7 +122,9 @@ export function Terminal() {
 
             {/* Line 2 */}
             <div
-              ref={(el) => (linesRef.current[1] = el)}
+              ref={(el) => {
+                linesRef.current[1] = el;
+              }}
               className="flex justify-between"
             >
               <span className="text-[#10B981]">
@@ -133,7 +136,9 @@ export function Terminal() {
 
             {/* Line 3 */}
             <div
-              ref={(el) => (linesRef.current[2] = el)}
+              ref={(el) => {
+                linesRef.current[2] = el;
+              }}
               className="flex justify-between"
             >
               <span className="text-[#10B981]">
@@ -145,7 +150,9 @@ export function Terminal() {
 
             {/* Line 4 */}
             <div
-              ref={(el) => (linesRef.current[3] = el)}
+              ref={(el) => {
+                linesRef.current[3] = el;
+              }}
               className="flex justify-between mt-2"
             >
               <span className="text-[#F59E0B]">
@@ -156,7 +163,9 @@ export function Terminal() {
 
             {/* Line 5 */}
             <div
-              ref={(el) => (linesRef.current[4] = el)}
+              ref={(el) => {
+                linesRef.current[4] = el;
+              }}
               className="flex justify-between"
             >
               <span className="text-[#19C978]">
@@ -166,7 +175,9 @@ export function Terminal() {
 
             {/* Line 6 */}
             <div
-              ref={(el) => (linesRef.current[5] = el)}
+              ref={(el) => {
+                linesRef.current[5] = el;
+              }}
               className="flex justify-between"
             >
               <span className="text-[#19C978]">
@@ -176,7 +187,9 @@ export function Terminal() {
 
             {/* Line 7 */}
             <div
-              ref={(el) => (linesRef.current[6] = el)}
+              ref={(el) => {
+                linesRef.current[6] = el;
+              }}
               className="flex justify-between mt-2"
             >
               <span className="text-[#F59E0B]">
@@ -186,7 +199,9 @@ export function Terminal() {
 
             {/* Line 8 */}
             <div
-              ref={(el) => (linesRef.current[7] = el)}
+              ref={(el) => {
+                linesRef.current[7] = el;
+              }}
               className="flex justify-between mt-2"
             >
               <span className="text-[#10B981]">
@@ -198,7 +213,9 @@ export function Terminal() {
 
             {/* Line 9 */}
             <div
-              ref={(el) => (linesRef.current[8] = el)}
+              ref={(el) => {
+                linesRef.current[8] = el;
+              }}
               className="flex justify-between"
             >
               <span className="text-[#10B981]">

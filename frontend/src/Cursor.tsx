@@ -98,11 +98,11 @@ export function Cursor() {
     <>
       <div
         ref={dotRef}
-        className="fixed top-0 left-0 w-[6px] h-[6px] bg-brand-accent rounded-full pointer-events-none z-[9999] mix-blend-difference"
+        className="fixed top-0 left-0 w-1.5 h-1.5 bg-brand-accent rounded-full pointer-events-none z-9999 mix-blend-difference"
       />
       <div
         ref={ringRef}
-        className="fixed top-0 left-0 w-[32px] h-[32px] border border-[rgba(25,201,120,0.5)] rounded-full pointer-events-none z-[9998]"
+        className="fixed top-0 left-0 w-8 h-8 border border-[rgba(25,201,120,0.5)] rounded-full pointer-events-none z-9998"
       />
     </>
   );

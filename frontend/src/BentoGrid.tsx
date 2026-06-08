@@ -99,10 +99,10 @@ export function BentoGrid() {
     >
       <div className="container-content">
         <div className="mb-16 text-center md:text-left">
-          <span className="font-mono text-[11px] text-[#19C978] uppercase tracking-[0.1em] font-bold block mb-4">
+          <span className="font-mono text-[11px] text-[#19C978] uppercase tracking-widest font-bold block mb-4">
             Why Miiso
           </span>
-          <h2 className="text-[44px] font-[700] text-text-primary leading-[1.1] tracking-tight">
+          <h2 className="text-[44px] font-bold text-text-primary leading-[1.1] tracking-tight">
             Everything a security agent should be.
           </h2>
         </div>
@@ -110,20 +110,14 @@ export function BentoGrid() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 auto-rows-[minmax(320px,auto)]">
           {/* Card 1 */}
           <div
-            ref={(el) => (cardsRef.current[0] = el)}
-            className="md:col-span-2 bg-brand-surface rounded-3xl border border-brand-border p-8 md:p-12 relative overflow-hidden flex flex-col justify-end min-h-[360px]"
-            style={{
-              background: `radial-gradient(800px circle at var(--mx, 50%) var(--my, 50%), rgba(25,201,120,0.08), transparent 40%), var(--color-brand-surface)`,
+            ref={(el) => {
+              cardsRef.current[0] = el;
             }}
+            className="spotlight-card md:col-span-2 bg-brand-surface rounded-3xl border border-brand-border p-8 md:p-12 relative overflow-hidden flex flex-col justify-end min-h-90"
           >
             <div
               ref={meshBgRef}
-              className="absolute inset-0 z-0 opacity-40 pointer-events-none"
-              style={{
-                background:
-                  "linear-gradient(90deg, rgba(25,201,120,0) 0%, rgba(25,201,120,0.1) 50%, rgba(25,201,120,0) 100%)",
-                backgroundSize: "200% 100%",
-              }}
+              className="mesh-bg absolute inset-0 z-0 opacity-40 pointer-events-none"
             />
             <div className="relative z-10 max-w-2xl">
               <h3 className="text-3xl font-bold mb-4">
@@ -138,13 +132,12 @@ export function BentoGrid() {
 
           {/* Card 2 */}
           <div
-            ref={(el) => (cardsRef.current[1] = el)}
-            className="bg-brand-surface rounded-3xl border border-brand-border p-8 md:p-12 relative overflow-hidden flex flex-col justify-between"
-            style={{
-              background: `radial-gradient(800px circle at var(--mx, 50%) var(--my, 50%), rgba(25,201,120,0.08), transparent 40%), var(--color-brand-surface)`,
+            ref={(el) => {
+              cardsRef.current[1] = el;
             }}
+            className="spotlight-card bg-brand-surface rounded-3xl border border-brand-border p-8 md:p-12 relative overflow-hidden flex flex-col justify-between"
           >
-            <div className="text-[56px] font-[800] leading-none mb-6 text-text-primary tabular-nums">
+            <div className="text-[56px] font-extrabold leading-none mb-6 text-text-primary tabular-nums">
               0 ETH
             </div>
             <div>
@@ -155,13 +148,12 @@ export function BentoGrid() {
 
           {/* Card 3 */}
           <div
-            ref={(el) => (cardsRef.current[2] = el)}
-            className="bg-brand-surface rounded-3xl border border-brand-border p-8 md:p-12 relative overflow-hidden flex flex-col justify-between"
-            style={{
-              background: `radial-gradient(800px circle at var(--mx, 50%) var(--my, 50%), rgba(25,201,120,0.08), transparent 40%), var(--color-brand-surface)`,
+            ref={(el) => {
+              cardsRef.current[2] = el;
             }}
+            className="spotlight-card bg-brand-surface rounded-3xl border border-brand-border p-8 md:p-12 relative overflow-hidden flex flex-col justify-between"
           >
-            <div className="text-[56px] font-[800] leading-none mb-6 text-[#10B981] tabular-nums drop-shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+            <div className="text-[56px] font-extrabold leading-none mb-6 text-[#10B981] tabular-nums drop-shadow-[0_0_15px_rgba(16,185,129,0.2)]">
               $0.01
             </div>
             <div>
@@ -172,11 +164,10 @@ export function BentoGrid() {
 
           {/* Card 4 */}
           <div
-            ref={(el) => (cardsRef.current[3] = el)}
-            className="bg-brand-surface rounded-3xl border border-brand-border p-8 md:p-12 relative overflow-hidden flex flex-col justify-between"
-            style={{
-              background: `radial-gradient(800px circle at var(--mx, 50%) var(--my, 50%), rgba(25,201,120,0.08), transparent 40%), var(--color-brand-surface)`,
+            ref={(el) => {
+              cardsRef.current[3] = el;
             }}
+            className="spotlight-card bg-brand-surface rounded-3xl border border-brand-border p-8 md:p-12 relative overflow-hidden flex flex-col justify-between"
           >
             <div className="mb-8 flex items-center justify-between">
               <div className="w-12 h-12 bg-brand-accent/20 rounded-xl flex items-center justify-center border border-brand-accent/30 text-brand-accent font-bold">
@@ -197,11 +188,10 @@ export function BentoGrid() {
 
           {/* Card 5 */}
           <div
-            ref={(el) => (cardsRef.current[4] = el)}
-            className="bg-brand-surface rounded-3xl border border-brand-border p-8 md:p-12 relative overflow-hidden flex flex-col justify-between"
-            style={{
-              background: `radial-gradient(800px circle at var(--mx, 50%) var(--my, 50%), rgba(25,201,120,0.08), transparent 40%), var(--color-brand-surface)`,
+            ref={(el) => {
+              cardsRef.current[4] = el;
             }}
+            className="spotlight-card bg-brand-surface rounded-3xl border border-brand-border p-8 md:p-12 relative overflow-hidden flex flex-col justify-between"
           >
             <div className="mb-8 space-y-2">
               <div className="bg-[#10B981]/10 text-[#10B981] px-4 py-2 rounded-lg font-mono text-xs font-bold border border-[#10B981]/20 w-fit shrink-0 tracking-widest">
@@ -222,11 +212,10 @@ export function BentoGrid() {
 
           {/* Card 6 */}
           <div
-            ref={(el) => (cardsRef.current[5] = el)}
-            className="md:col-span-2 bg-brand-surface rounded-3xl border border-brand-border p-8 md:p-12 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-end gap-12"
-            style={{
-              background: `radial-gradient(800px circle at var(--mx, 50%) var(--my, 50%), rgba(25,201,120,0.08), transparent 40%), var(--color-brand-surface)`,
+            ref={(el) => {
+              cardsRef.current[5] = el;
             }}
+            className="spotlight-card md:col-span-2 bg-brand-surface rounded-3xl border border-brand-border p-8 md:p-12 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-end gap-12"
           >
             <div className="flex-1 max-w-xl relative w-full">
               <h3 className="text-3xl font-bold mb-4">
@@ -237,8 +226,8 @@ export function BentoGrid() {
               </p>
             </div>
 
-            <div className="bg-brand-bg border border-brand-border rounded-xl p-6 w-full md:w-auto shrink-0 relative min-w-[280px]">
-              <div className="absolute top-0 right-10 w-[1px] h-full bg-brand-border shrink-0"></div>
+            <div className="bg-brand-bg border border-brand-border rounded-xl p-6 w-full md:w-auto shrink-0 relative min-w-70">
+              <div className="absolute top-0 right-10 w-px h-full bg-brand-border shrink-0"></div>
               <div className="space-y-6 relative z-10 w-full">
                 <div className="flex items-center justify-between gap-12">
                   <div className="flex items-center gap-3">
