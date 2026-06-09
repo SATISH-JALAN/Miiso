@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, ArrowRight, CheckCircle, Wallet, Loader2 } from 'lucide-react';
+import { Shield, ArrowRight, CheckCircle, Wallet, Loader2, ListPlus, Plus, Trash2 } from 'lucide-react';
 import { WordsPullUpMultiStyle } from './Shared';
 import { Link } from 'react-router-dom';
 import { useWallet } from './WalletContext';
@@ -9,6 +9,11 @@ export function Setup() {
   const { walletAddress, isConnected, connectWallet, refreshAllData } = useWallet();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+
+  // Setup Wizard Custom configurations
+  const [budgetCap, setBudgetCap] = useState(100);
+  const [whitelist, setWhitelist] = useState<string[]>([]);
+  const [newWhitelistAddress, setNewWhitelistAddress] = useState('');
 
   // Automatically advance to Step 2 if wallet connects while on Step 1
   useEffect(() => {
@@ -38,6 +43,19 @@ export function Setup() {
     }, 1500);
   };
 
+  const handleAddWhitelist = () => {
+    if (newWhitelistAddress.length === 42 && newWhitelistAddress.startsWith("0x")) {
+      setWhitelist([...whitelist, newWhitelistAddress.toLowerCase()]);
+      setNewWhitelistAddress('');
+    } else {
+      alert("Invalid Ethereum address format (must be 42 characters starting with 0x).");
+    }
+  };
+
+  const handleRemoveWhitelist = (index: number) => {
+    setWhitelist(whitelist.filter((_, idx) => idx !== index));
+  };
+
   const handleGrantPermission = async () => {
     if (!walletAddress) return;
     setLoading(true);
@@ -46,7 +64,11 @@ export function Setup() {
       const res = await fetch("http://localhost:3001/api/dev/seed-wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userAddress: walletAddress })
+        body: JSON.stringify({ 
+          userAddress: walletAddress,
+          budgetCap: budgetCap,
+          whitelistAddresses: whitelist
+        })
       });
       const data = await res.json();
       if (data.success) {
@@ -146,32 +168,87 @@ export function Setup() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="flex flex-col items-center text-center"
+              className="flex flex-col items-center text-center w-full"
             >
-              <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Grant Permission</h2>
-              <p className="text-primary opacity-70 mb-8 max-w-sm">
-                Authorize the Miiso Sentinel agent with EIP-7715 delegation permissions. You can revoke this delegation instantly at any time.
+              <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-2 font-medium">Customize Setup Rules</h2>
+              <p className="text-gray-400 text-sm mb-8 max-w-sm">
+                Configure your auto-pilot gas buffer limit and add trusted protocol contracts before signing permissions.
               </p>
               
-              <div className="bg-black p-6 rounded-2xl border border-white/5 font-mono text-xs sm:text-sm w-full mb-8 text-left">
-                <div className="flex justify-between items-center py-3 border-b border-white/5">
-                  <span className="text-gray-500">Function allowed</span>
-                  <span className="text-[#19C978]">revoke token approval only</span>
+              <div className="space-y-6 w-full text-left mb-8">
+                {/* Gas Relayer Budget Limit Customization */}
+                <div className="bg-black/40 border border-white/5 p-5 rounded-2xl">
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Monthly Gas Relayer Cap</label>
+                    <span className="text-[#19C978] font-mono font-bold text-sm">{budgetCap} WETH</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="10" 
+                    max="500" 
+                    step="10" 
+                    value={budgetCap} 
+                    onChange={(e) => setBudgetCap(Number(e.target.value))}
+                    className="w-full accent-[#19C978] bg-white/10 rounded-lg h-1.5 cursor-pointer"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-2">Max allowed gas used by Sentinel for automated, gasless veto/revocation relays.</p>
                 </div>
-                <div className="flex justify-between items-center py-3 border-b border-white/5">
-                  <span className="text-gray-500">Can transfer funds</span>
-                  <span className="text-[#EF4444]">never</span>
+
+                {/* Whitelisting Smart Contracts */}
+                <div className="bg-black/40 border border-white/5 p-5 rounded-2xl">
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest block mb-2">Trusted Protocols Whitelist</label>
+                  <div className="flex gap-2 mb-4">
+                    <input 
+                      type="text" 
+                      placeholder="Paste contract address (0x...)" 
+                      value={newWhitelistAddress}
+                      onChange={(e) => setNewWhitelistAddress(e.target.value)}
+                      className="flex-1 bg-black p-2.5 rounded-lg border border-white/5 text-[#E1E0CC] font-mono text-xs placeholder-gray-600 focus:outline-none focus:border-[#19C978]/50"
+                    />
+                    <button 
+                      onClick={handleAddWhitelist}
+                      className="bg-[#19C978] text-black px-3.5 rounded-lg text-xs font-bold hover:bg-[#14a361] transition-colors flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add
+                    </button>
+                  </div>
+
+                  {whitelist.length > 0 ? (
+                    <div className="max-h-24 overflow-y-auto space-y-1.5 pr-1">
+                      {whitelist.map((addr, idx) => (
+                        <div key={idx} className="flex justify-between items-center bg-black/60 p-2 rounded border border-white/5">
+                          <span className="font-mono text-[10px] text-[#E1E0CC]">{addr}</span>
+                          <button 
+                            onClick={() => handleRemoveWhitelist(idx)}
+                            className="text-gray-500 hover:text-[#EF4444] transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-gray-500 italic">No custom whitelisted protocols added yet. You can add them later in settings.</p>
+                  )}
                 </div>
-                <div className="flex justify-between items-center py-3">
-                  <span className="text-gray-500">Monthly budget cap</span>
-                  <span className="text-[#E1E0CC]">100 USDC (WETH equivalent)</span>
+
+                {/* Scope details */}
+                <div className="bg-black/60 p-4 rounded-xl border border-white/5 font-mono text-[10px] space-y-2 text-gray-500">
+                  <div className="flex justify-between">
+                    <span>Scope Allowed</span>
+                    <span className="text-[#19C978]">Revoke Token Approvals Only</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Relayer Target</span>
+                    <span className="text-[#E1E0CC]">1Shot Gasless Relay network</span>
+                  </div>
                 </div>
               </div>
 
               <button 
                 onClick={handleGrantPermission}
                 disabled={loading}
-                className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-bold hover:bg-white transition-colors flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 {loading ? 'Granting Permission...' : 'Approve in MetaMask'}

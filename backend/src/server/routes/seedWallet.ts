@@ -1,10 +1,12 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { db } from "../../db/client.js";
-import { permissionsRegistry, approvalCache, protectionEvents, contractScanLog } from "../../db/schema.js";
+import { permissionsRegistry, approvalCache, protectionEvents, contractScanLog, whitelist } from "../../db/schema.js";
 import { logger } from "../../utils/logger.js";
 
 interface SeedWalletRequestBody {
   userAddress: string;
+  budgetCap?: number;
+  whitelistAddresses?: string[];
 }
 
 export async function seedWalletRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
@@ -16,17 +18,25 @@ export async function seedWalletRoutes(fastify: FastifyInstance, options: Fastif
           type: "object",
           required: ["userAddress"],
           properties: {
-            userAddress: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" }
+            userAddress: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
+            budgetCap: { type: "number" },
+            whitelistAddresses: {
+              type: "array",
+              items: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" }
+            }
           }
         }
       }
     },
     async (request, reply) => {
-      const { userAddress } = request.body;
+      const { userAddress, budgetCap = 100, whitelistAddresses = [] } = request.body;
       const normalizedUser = userAddress.toLowerCase();
 
       try {
-        logger.info(`🌱 Dev seeding wallet data for address: ${normalizedUser}`);
+        logger.info(`🌱 Dev seeding wallet data for address: ${normalizedUser} with budget: ${budgetCap} WETH and ${whitelistAddresses.length} custom whitelist addresses`);
+
+        // Convert budgetCap to WETH equivalent in wei (assuming budgetCap is in WETH)
+        const budgetCapWei = (budgetCap * 1e18).toString();
 
         // 1. Create permission registry
         await db
@@ -36,7 +46,7 @@ export async function seedWalletRoutes(fastify: FastifyInstance, options: Fastif
             permissionContext: "0x1234567890abcdef",
             delegationHash: "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
             sessionSignerAddress: "0x70997970c51812dc3a010c7d01b50e0d17dc79c8".toLowerCase(),
-            budgetCap: "100000000",
+            budgetCap: budgetCapWei,
             budgetSpent: "0",
             securityProfile: "balanced",
             expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
@@ -139,6 +149,19 @@ export async function seedWalletRoutes(fastify: FastifyInstance, options: Fastif
           ])
           .onConflictDoNothing();
 
+        // 5. Seed custom whitelist
+        if (whitelistAddresses && whitelistAddresses.length > 0) {
+          for (const addr of whitelistAddresses) {
+            await db
+              .insert(whitelist)
+              .values({
+                address: addr.toLowerCase(),
+                protocolName: "Custom User Protocol"
+              })
+              .onConflictDoNothing();
+          }
+        }
+
         return reply.status(200).send({
           success: true,
           message: `Wallet ${normalizedUser} successfully seeded with demo mock data.`
@@ -148,6 +171,49 @@ export async function seedWalletRoutes(fastify: FastifyInstance, options: Fastif
         return reply.status(500).send({
           error: "DatabaseError",
           message: err.message || "Failed to seed mock values"
+        });
+      }
+    }
+  );
+
+  fastify.post<{ Body: { spenderAddress: string; veniceConfidence?: number; staticRisk?: string; staticFlags?: string[] } }>(
+    "/dev/simulate-threat",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["spenderAddress"],
+          properties: {
+            spenderAddress: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
+            veniceConfidence: { type: "number" },
+            staticRisk: { type: "string", enum: ["high", "medium", "low"] },
+            staticFlags: { type: "array", items: { type: "string" } }
+          }
+        }
+      }
+    },
+    async (request, reply) => {
+      const { spenderAddress, veniceConfidence = 0.85, staticRisk = "high", staticFlags = ["UNRESTRICTED_TRANSFER_FROM"] } = request.body;
+      try {
+        logger.info(`🚨 Dev simulating threat for spender: ${spenderAddress}`);
+        const { routeThreatConfidence } = await import("../../daemon/confidenceRouter.js");
+        await routeThreatConfidence({
+          contractAddress: spenderAddress,
+          bytecode: "0x",
+          staticRisk: staticRisk as any,
+          staticFlags,
+          veniceVulnerable: true,
+          veniceConfidence
+        });
+        return reply.status(200).send({
+          success: true,
+          message: `Threat routing simulation triggered for spender: ${spenderAddress}`
+        });
+      } catch (err: any) {
+        logger.error(`❌ Dev threat simulation failed:`, err);
+        return reply.status(500).send({
+          error: "SimulationError",
+          message: err.message || "Failed to route simulated threat"
         });
       }
     }
