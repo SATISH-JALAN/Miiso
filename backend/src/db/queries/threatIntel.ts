@@ -12,7 +12,7 @@ export async function insertThreatIntel(data: {
     .values({
       bytecodeHash: data.bytecodeHash,
       bytecode: data.bytecode,
-      embedding: data.embedding,
+      embedding: JSON.stringify(data.embedding), // Serialize as JSON text
       createdAt: new Date(),
     })
     .returning();
@@ -20,18 +20,41 @@ export async function insertThreatIntel(data: {
   return inserted;
 }
 
+/**
+ * Finds similar threats using cosine similarity computed in JS.
+ * (pgvector not available — fallback to application-level similarity)
+ */
 export async function findSimilarThreats(embedding: number[], limit = 5) {
-  // Convert embedding array to string format "[x,y,z...]" for pgvector input
-  const embeddingString = `[${embedding.join(",")}]`;
-  
-  return await db
+  // Fetch all stored embeddings (acceptable for hackathon-scale catalog)
+  const allThreats = await db
     .select({
       id: threatIntelCatalog.id,
       bytecodeHash: threatIntelCatalog.bytecodeHash,
       bytecode: threatIntelCatalog.bytecode,
-      similarity: sql<number>`1 - (${threatIntelCatalog.embedding} <=> ${embeddingString}::vector)`
+      embedding: threatIntelCatalog.embedding,
     })
-    .from(threatIntelCatalog)
-    .orderBy(sql`${threatIntelCatalog.embedding} <=> ${embeddingString}::vector`)
-    .limit(limit);
+    .from(threatIntelCatalog);
+
+  // Compute cosine similarity in JS
+  const scored = allThreats.map((threat) => {
+    const storedEmbedding: number[] = JSON.parse(threat.embedding);
+    const similarity = cosineSimilarity(embedding, storedEmbedding);
+    return { ...threat, similarity };
+  });
+
+  // Sort by descending similarity and return top N
+  scored.sort((a, b) => b.similarity - a.similarity);
+  return scored.slice(0, limit);
+}
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) return 0;
+  let dot = 0, magA = 0, magB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    magA += a[i] * a[i];
+    magB += b[i] * b[i];
+  }
+  const denom = Math.sqrt(magA) * Math.sqrt(magB);
+  return denom === 0 ? 0 : dot / denom;
 }

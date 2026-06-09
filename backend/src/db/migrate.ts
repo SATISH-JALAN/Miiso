@@ -7,16 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function runMigrations() {
-  console.log("⚡ Database migrations: starting...");
-  try {
-    await migrate(db, {
-      migrationsFolder: path.join(__dirname, "migrations"),
-    });
-    console.log("✅ Database migrations: completed successfully.");
-  } catch (error) {
-    console.error("❌ Database migrations: failed to run:", error);
-    throw error;
-  }
+  console.log("⚡ Database migrations: Skipping automated migration run (using drizzle-kit push).");
 }
 
 // Allow direct execution if run via CLI

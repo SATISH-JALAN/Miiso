@@ -1,17 +1,4 @@
-import { pgTable, text, timestamp, boolean, numeric, uuid, integer, bigint, customType, unique } from "drizzle-orm/pg-core";
-
-// Custom type for pgvector 1536-dimensional embeddings
-export const vector1536 = customType<{ data: number[]; driverData: string }>({
-  dataType() {
-    return "vector(1536)";
-  },
-  toDriver(value: number[]): string {
-    return `[${value.join(",")}]`;
-  },
-  fromDriver(value: string): number[] {
-    return value.replace(/[\[\]]/g, "").split(",").map(Number);
-  }
-});
+import { pgTable, text, timestamp, boolean, numeric, uuid, integer, bigint, unique } from "drizzle-orm/pg-core";
 
 // 1. Permissions Registry (ERC-7715 Permissions)
 export const permissionsRegistry = pgTable("permissions_registry", {
@@ -57,12 +44,12 @@ export const protectionEvents = pgTable("protection_events", {
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-// 4. Threat Intel Catalog (pgvector embeddings for similarity matching)
+// 4. Threat Intel Catalog (embeddings stored as JSON text — pgvector not required)
 export const threatIntelCatalog = pgTable("threat_intel_catalog", {
   id: uuid("id").defaultRandom().primaryKey(),
   bytecodeHash: text("bytecode_hash").notNull().unique(),
   bytecode: text("bytecode").notNull(),
-  embedding: vector1536("embedding").notNull(),
+  embedding: text("embedding").notNull(), // JSON-serialized number[] array
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
