@@ -13,6 +13,7 @@ import { revokeManualRoutes } from "./routes/revoke-manual.js";
 import { vetoRoutes } from "./routes/veto.js";
 import { webhookRoutes } from "./routes/webhook.js";
 import { threatIntelRoutes } from "./routes/threatIntel.js";
+import { seedWalletRoutes } from "./routes/seedWallet.js";
 
 export function buildApp() {
   const app = Fastify({
@@ -70,6 +71,7 @@ export function buildApp() {
   app.register(vetoRoutes, { prefix: "/api" });
   app.register(webhookRoutes, { prefix: "/api" });
   app.register(threatIntelRoutes, { prefix: "/api" });
+  app.register(seedWalletRoutes, { prefix: "/api" });
 
   return app;
 }

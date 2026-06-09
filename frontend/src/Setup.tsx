@@ -1,14 +1,73 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, ArrowRight, CheckCircle, Wallet } from 'lucide-react';
+import { Shield, ArrowRight, CheckCircle, Wallet, Loader2 } from 'lucide-react';
 import { WordsPullUpMultiStyle } from './Shared';
 import { Link } from 'react-router-dom';
+import { useWallet } from './WalletContext';
 
 export function Setup() {
+  const { walletAddress, isConnected, connectWallet, refreshAllData } = useWallet();
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  // Automatically advance to Step 2 if wallet connects while on Step 1
+  useEffect(() => {
+    if (isConnected && step === 1) {
+      setStep(2);
+    }
+  }, [isConnected, step]);
+
+  const handleConnect = async () => {
+    setLoading(true);
+    try {
+      await connectWallet();
+      setStep(2);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpgrade = () => {
+    setLoading(true);
+    // Mock EIP-7710 Smart Account contract execution
+    setTimeout(() => {
+      setLoading(false);
+      setStep(3);
+    }, 1500);
+  };
+
+  const handleGrantPermission = async () => {
+    if (!walletAddress) return;
+    setLoading(true);
+    try {
+      // Register EIP-7715 delegation permissions & seed test approvals/logs for this wallet address
+      const res = await fetch("http://localhost:3001/api/dev/seed-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userAddress: walletAddress })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await refreshAllData();
+        setStep(4);
+      } else {
+        alert("Failed to register delegation permissions: " + (data.message || "Unknown error"));
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error: Could not reach the fastify relayer.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatAddr = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
 
   return (
     <div className="pt-32 pb-24 px-4 sm:px-6 max-w-2xl mx-auto min-h-screen flex flex-col items-center justify-center">
+      {/* Progress Bar */}
       <div className="w-full flex items-center justify-center gap-2 mb-12">
         {[1, 2, 3, 4].map(i => (
           <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-[#19C978]' : 'bg-white/10'}`} />
@@ -33,13 +92,15 @@ export function Setup() {
               
               <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-8 w-full text-left">
                 <p className="text-sm text-gray-400">Notice: 0 ETH detected in wallet.</p>
-                <p className="text-sm text-[#19C978] mt-1">No ETH needed. Miiso uses USDC for gas via 1Shot.</p>
+                <p className="text-sm text-[#19C978] mt-1">No ETH needed. Miiso uses USDC for gas via 1Shot Relayer.</p>
               </div>
 
               <button 
-                onClick={() => setStep(2)}
-                className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors"
+                onClick={handleConnect}
+                disabled={loading}
+                className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors flex items-center justify-center gap-2"
               >
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Connect MetaMask
               </button>
             </motion.div>
@@ -58,14 +119,23 @@ export function Setup() {
               </div>
               <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Smart Account Upgrade</h2>
               <p className="text-primary opacity-70 mb-8 max-w-sm">
-                Miiso upgrades your wallet to a MetaMask Smart Account using ERC-7715. This is a one-time $0.01 USDC transaction.
+                Miiso upgrades your wallet to a MetaMask Smart Account using ERC-7710 and ERC-7715. This enables gasless transactions via 1Shot Relayer.
               </p>
+
+              {walletAddress && (
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-6 w-full text-center">
+                  <span className="text-xs text-gray-400">Wallet Connected: </span>
+                  <span className="text-xs font-mono text-[#19C978]">{formatAddr(walletAddress)}</span>
+                </div>
+              )}
               
               <button 
-                onClick={() => setStep(3)}
-                className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors"
+                onClick={handleUpgrade}
+                disabled={loading}
+                className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors flex items-center justify-center gap-2"
               >
-                Upgrade My Wallet
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading ? 'Upgrading Wallet...' : 'Upgrade My Wallet'}
               </button>
             </motion.div>
           )}
@@ -80,7 +150,7 @@ export function Setup() {
             >
               <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Grant Permission</h2>
               <p className="text-primary opacity-70 mb-8 max-w-sm">
-                This is the only permission Miiso will ever have. You can revoke it instantly from this page at any time.
+                Authorize the Miiso Sentinel agent with EIP-7715 delegation permissions. You can revoke this delegation instantly at any time.
               </p>
               
               <div className="bg-black p-6 rounded-2xl border border-white/5 font-mono text-xs sm:text-sm w-full mb-8 text-left">
@@ -94,15 +164,17 @@ export function Setup() {
                 </div>
                 <div className="flex justify-between items-center py-3">
                   <span className="text-gray-500">Monthly budget cap</span>
-                  <span className="text-[#E1E0CC]">5 USDC</span>
+                  <span className="text-[#E1E0CC]">100 USDC (WETH equivalent)</span>
                 </div>
               </div>
 
               <button 
-                onClick={() => setStep(4)}
-                className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors"
+                onClick={handleGrantPermission}
+                disabled={loading}
+                className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors flex items-center justify-center gap-2"
               >
-                Approve in MetaMask
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading ? 'Granting Permission...' : 'Approve in MetaMask'}
               </button>
             </motion.div>
           )}
@@ -122,26 +194,26 @@ export function Setup() {
               <div className="space-y-4 text-left w-full max-w-xs mb-8">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-[#19C978]" />
-                  <span className="text-[#E1E0CC]">Smart account active</span>
+                  <span className="text-[#E1E0CC]">Smart account active (x402 Relayer)</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-[#19C978]" />
-                  <span className="text-[#E1E0CC]">Permission granted</span>
+                  <span className="text-[#E1E0CC]">EIP-7715 Permission granted</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-[#19C978]" />
-                  <span className="text-[#E1E0CC]">Scanning started</span>
+                  <span className="text-[#E1E0CC]">Sentinel threat scanning active</span>
                 </div>
               </div>
 
               <div className="bg-white/5 rounded-xl p-4 w-full mb-8">
-                <span className="text-gray-400 text-sm">Budget remaining:</span>
-                <span className="text-[#E1E0CC] ml-2 font-mono">5.00 USDC</span>
+                <span className="text-gray-400 text-sm">Relay budget remaining:</span>
+                <span className="text-[#E1E0CC] ml-2 font-mono">100.00 USDC</span>
               </div>
 
               <Link 
                 to="/dashboard"
-                className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors block"
+                className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors block text-center"
               >
                 Go to Dashboard
               </Link>
