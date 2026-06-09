@@ -36,7 +36,7 @@ export function Footer() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Shield className="w-6 h-6 text-brand-accent" />
-              <span className="font-sans font-[800] text-text-primary text-xl tracking-tight">
+              <span className="font-sans font-extrabold text-text-primary text-xl tracking-tight">
                 miiso
               </span>
             </div>
@@ -80,7 +80,7 @@ export function Footer() {
           {/* Right Column */}
           <div className="flex flex-col items-start gap-4">
             <h4 className="text-text-primary font-bold mb-2">Get Started</h4>
-            <button className="bg-brand-accent text-[#0A0A0A] px-6 py-3 rounded-[100px] text-sm font-[600] hover:brightness-110 transition-all w-fit">
+            <button className="bg-brand-accent text-[#0A0A0A] px-6 py-3 rounded-[100px] text-sm font-semibold hover:brightness-110 transition-all w-fit">
               Start protection
             </button>
             <div className="text-xs text-text-muted mt-2 space-y-1">

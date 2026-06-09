@@ -4,7 +4,7 @@ export function About() {
   return (
     <section className="bg-black py-24 px-4 sm:px-6 z-10 relative">
       <div className="bg-[#101010] max-w-6xl mx-auto rounded-3xl p-8 md:p-16 mb-24 flex flex-col items-center text-center">
-        <span className="text-[#DEDBC8] text-[10px] sm:text-xs tracking-widest uppercase mb-12">
+        <span className="text-primary text-[10px] sm:text-xs tracking-widest uppercase mb-12">
           Autonomous Security
         </span>
         
@@ -20,7 +20,7 @@ export function About() {
         <div className="max-w-2xl mx-auto mt-8">
           <AnimatedLetterText 
             text="Over the last year, DeFi users lost billions to malicious token approvals. Miiso acts within seconds of a threat deployment, ensuring your assets remain untouched before attackers can act."
-            className="text-[#DEDBC8] text-sm sm:text-base md:text-lg leading-relaxed"
+            className="text-primary text-sm sm:text-base md:text-lg leading-relaxed"
           />
         </div>
       </div>

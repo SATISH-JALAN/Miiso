@@ -37,7 +37,7 @@ export function Features() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 lg:h-[480px] gap-3 sm:gap-2 md:gap-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 lg:h-120 gap-3 sm:gap-2 md:gap-1">
           {/* Card 1 */}
           <FeatureCard delay={0} className="lg:col-span-1 bg-[#212121] h-64 lg:h-full">
             <video 
@@ -62,14 +62,14 @@ export function Features() {
                </h3>
                
                <ul className="space-y-4">
-                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-[#DEDBC8] shrink-0" /><span className="text-gray-400 text-sm">Pay gas in USDC</span></li>
-                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-[#DEDBC8] shrink-0" /><span className="text-gray-400 text-sm">1Shot relay network</span></li>
-                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-[#DEDBC8] shrink-0" /><span className="text-gray-400 text-sm">No monthly subs</span></li>
-                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-[#DEDBC8] shrink-0" /><span className="text-gray-400 text-sm">Instant execution</span></li>
+                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-primary shrink-0" /><span className="text-gray-400 text-sm">Pay gas in USDC</span></li>
+                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-primary shrink-0" /><span className="text-gray-400 text-sm">1Shot relay network</span></li>
+                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-primary shrink-0" /><span className="text-gray-400 text-sm">No monthly subs</span></li>
+                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-primary shrink-0" /><span className="text-gray-400 text-sm">Instant execution</span></li>
                </ul>
              </div>
 
-             <a href="#" className="inline-flex items-center gap-2 text-[#DEDBC8] text-sm mt-8 group hover:text-white transition-colors uppercase tracking-wider font-semibold">
+             <a href="#" className="inline-flex items-center gap-2 text-primary text-sm mt-8 group hover:text-white transition-colors uppercase tracking-wider font-semibold">
                 Learn more <ArrowRight className="w-4 h-4 -rotate-45 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
              </a>
           </FeatureCard>
@@ -86,13 +86,13 @@ export function Features() {
                </h3>
                
                <ul className="space-y-4">
-                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-[#DEDBC8] shrink-0" /><span className="text-gray-400 text-sm">Venice AI parsing</span></li>
-                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-[#DEDBC8] shrink-0" /><span className="text-gray-400 text-sm">Uncensored threat intel</span></li>
-                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-[#DEDBC8] shrink-0" /><span className="text-gray-400 text-sm">97.4% confidence rating</span></li>
+                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-primary shrink-0" /><span className="text-gray-400 text-sm">Venice AI parsing</span></li>
+                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-primary shrink-0" /><span className="text-gray-400 text-sm">Uncensored threat intel</span></li>
+                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-primary shrink-0" /><span className="text-gray-400 text-sm">97.4% confidence rating</span></li>
                </ul>
              </div>
 
-             <a href="#" className="inline-flex items-center gap-2 text-[#DEDBC8] text-sm mt-8 group hover:text-white transition-colors uppercase tracking-wider font-semibold">
+             <a href="#" className="inline-flex items-center gap-2 text-primary text-sm mt-8 group hover:text-white transition-colors uppercase tracking-wider font-semibold">
                 Learn more <ArrowRight className="w-4 h-4 -rotate-45 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
              </a>
           </FeatureCard>
@@ -109,13 +109,13 @@ export function Features() {
                </h3>
                
                <ul className="space-y-4">
-                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-[#DEDBC8] shrink-0" /><span className="text-gray-400 text-sm">Can revoke approvals</span></li>
+                  <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-primary shrink-0" /><span className="text-gray-400 text-sm">Can revoke approvals</span></li>
                   <li className="flex gap-3 items-start"><span className="w-5 h-5 flex items-center justify-center text-red-500/80 shrink-0 font-bold opacity-70">✗</span><span className="text-gray-400 text-sm">Cannot transfer funds</span></li>
                   <li className="flex gap-3 items-start"><span className="w-5 h-5 flex items-center justify-center text-red-500/80 shrink-0 font-bold opacity-70">✗</span><span className="text-gray-400 text-sm">Cannot swap tokens</span></li>
                </ul>
              </div>
 
-             <a href="#" className="inline-flex items-center gap-2 text-[#DEDBC8] text-sm mt-8 group hover:text-white transition-colors uppercase tracking-wider font-semibold">
+             <a href="#" className="inline-flex items-center gap-2 text-primary text-sm mt-8 group hover:text-white transition-colors uppercase tracking-wider font-semibold">
                 Learn more <ArrowRight className="w-4 h-4 -rotate-45 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
              </a>
           </FeatureCard>

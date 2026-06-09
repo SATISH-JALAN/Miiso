@@ -122,51 +122,59 @@ export function StatsRow() {
       className="section-padding bg-brand-surface border-t border-brand-border"
     >
       <div className="container-content">
-        <div className="flex flex-col md:flex-row items-center justify-center gap-12 md:gap-[120px] divide-y md:divide-y-0 md:divide-x divide-brand-border">
+        <div className="flex flex-col md:flex-row items-center justify-center gap-12 md:gap-30 divide-y md:divide-y-0 md:divide-x divide-brand-border">
           <div
-            ref={(el) => (itemsRef.current[0] = el)}
+            ref={(el) => {
+              itemsRef.current[0] = el;
+            }}
             className="flex flex-col items-center pt-8 md:pt-0 pl-0 md:pl-12 first:pt-0 first:pl-0"
           >
-            <h4 className="text-[52px] font-[800] text-text-primary mb-2 tabular-nums">
+            <h4 className="text-[52px] font-extrabold text-text-primary mb-2 tabular-nums">
               $0.00B
             </h4>
-            <p className="text-[14px] text-text-secondary text-center max-w-[140px] leading-snug">
+            <p className="text-[14px] text-text-secondary text-center max-w-35 leading-snug">
               lost to DeFi exploits in 2024
             </p>
           </div>
 
           <div
-            ref={(el) => (itemsRef.current[1] = el)}
+            ref={(el) => {
+              itemsRef.current[1] = el;
+            }}
             className="flex flex-col items-center pt-8 md:pt-0 pl-0 md:pl-12 first:pt-0 first:pl-0"
           >
-            <h4 className="text-[52px] font-[800] text-text-primary mb-2 tabular-nums">
+            <h4 className="text-[52px] font-extrabold text-text-primary mb-2 tabular-nums">
               0%+
             </h4>
-            <p className="text-[14px] text-text-secondary text-center max-w-[140px] leading-snug">
+            <p className="text-[14px] text-text-secondary text-center max-w-35 leading-snug">
               of retail losses from token approvals
             </p>
           </div>
 
           <div
-            ref={(el) => (itemsRef.current[2] = el)}
+            ref={(el) => {
+              itemsRef.current[2] = el;
+            }}
             className="flex flex-col items-center pt-8 md:pt-0 pl-0 md:pl-12 first:pt-0 first:pl-0"
           >
-            <h4 className="text-[52px] font-[800] text-text-primary mb-2 tabular-nums">
+            <h4 className="text-[52px] font-extrabold text-text-primary mb-2 tabular-nums">
               0.0s
             </h4>
-            <p className="text-[14px] text-text-secondary text-center max-w-[140px] leading-snug">
+            <p className="text-[14px] text-text-secondary text-center max-w-35 leading-snug">
               average Miiso response time
             </p>
           </div>
 
           <div
-            ref={(el) => (itemsRef.current[3] = el)}
+            ref={(el) => {
+              itemsRef.current[3] = el;
+            }}
             className="flex flex-col items-center pt-8 md:pt-0 pl-0 md:pl-12 first:pt-0 first:pl-0 border-brand-border"
           >
-            <h4 className="text-[52px] font-[800] text-text-primary mb-2 tabular-nums">
+            <h4 className="text-[52px] font-extrabold text-text-primary mb-2 tabular-nums">
               $0.00
             </h4>
-            <p className="text-[14px] text-text-secondary text-center max-w-[140px] leading-snug">
+            <p className="text-[14px] text-text-secondary text-center max-w-35 leading-snug">
               cost per protection event
             </p>
           </div>

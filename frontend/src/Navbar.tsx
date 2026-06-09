@@ -24,10 +24,7 @@ export function Navbar() {
             <Link 
               key={link.path} 
               to={link.path}
-              className="text-xs md:text-sm font-medium transition-colors" 
-              style={{ color: location.pathname === link.path ? "#19C978" : "rgba(225, 224, 204, 0.8)" }} 
-              onMouseEnter={e => e.currentTarget.style.color = location.pathname === link.path ? "#19C978" : "#E1E0CC"} 
-              onMouseLeave={e => e.currentTarget.style.color = location.pathname === link.path ? "#19C978" : "rgba(225, 224, 204, 0.8)"}
+              className={`text-xs md:text-sm font-medium transition-colors ${location.pathname === link.path ? "text-brand-accent" : "text-[#E1E0CC]/80 hover:text-[#E1E0CC]"}`}
             >
               {link.label}
             </Link>
@@ -37,7 +34,7 @@ export function Navbar() {
         {/* Connect Wallet */}
         <button 
           onClick={() => setWalletConnected(!walletConnected)}
-          className="group flex items-center gap-2 bg-[#DEDBC8] text-black rounded-full pl-5 pr-2 py-2 hover:gap-3 transition-all duration-300 shadow-2xl"
+          className="group flex items-center gap-2 bg-primary text-black rounded-full pl-5 pr-2 py-2 hover:gap-3 transition-all duration-300 shadow-2xl"
         >
           <span className="font-medium text-sm">
             {walletConnected ? '0x4a...9c2d' : 'Connect Wallet'}

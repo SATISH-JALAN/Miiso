@@ -53,7 +53,7 @@ export function Marquee() {
         {row1Content.map((card, i) => (
           <div
             key={`r1-${i}`}
-            className="w-[300px] shrink-0 mx-3 p-[20px] px-[24px] bg-[#0F0F0F] border border-brand-border rounded-[12px] flex flex-col justify-between min-h-[160px]"
+            className="w-75 shrink-0 mx-3 p-5 px-6 bg-[#0F0F0F] border border-brand-border rounded-xl flex flex-col justify-between min-h-40"
           >
             <p className="text-[14px] leading-relaxed text-[#A1A1AA] mb-4">
               "{card.quote}"
@@ -75,7 +75,7 @@ export function Marquee() {
         {row2Content.map((card, i) => (
           <div
             key={`r2-${i}`}
-            className="w-[300px] shrink-0 mx-3 p-[20px] px-[24px] bg-[#0F0F0F] border border-brand-border rounded-[12px] flex flex-col justify-between min-h-[160px]"
+            className="w-75 shrink-0 mx-3 p-5 px-6 bg-[#0F0F0F] border border-brand-border rounded-xl flex flex-col justify-between min-h-40"
           >
             <p className="text-[14px] leading-relaxed text-[#A1A1AA] mb-4">
               "{card.quote}"

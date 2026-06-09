@@ -90,26 +90,28 @@ export function StickyScroll() {
           {/* Left Column (Sticky) */}
           <div
             ref={leftColRef}
-            className="md:sticky md:top-[120px] md:w-1/3 shrink-0 py-12"
+            className="md:sticky md:top-30 md:w-1/3 shrink-0 py-12"
           >
             <div className="mb-4">
-              <span className="font-mono text-[11px] text-[#19C978] uppercase tracking-[0.1em] font-bold">
+              <span className="font-mono text-[11px] text-[#19C978] uppercase tracking-widest font-bold">
                 How it works
               </span>
             </div>
-            <h2 className="text-[44px] font-[700] text-text-primary leading-[1.1] mb-12 whitespace-pre-line tracking-tight">
+            <h2 className="text-[44px] font-bold text-text-primary leading-[1.1] mb-12 whitespace-pre-line tracking-tight">
               {"Set up once.\nProtected forever."}
             </h2>
 
-            <div className="hidden md:flex flex-col items-center w-fit gap-2 h-[200px]">
+            <div className="hidden md:flex flex-col items-center w-fit gap-2 h-50">
               {[0, 1, 2, 3].map((i) => (
                 <div key={i} className="flex flex-col items-center">
                   <div
-                    ref={(el) => (dotsRef.current[i] = el)}
+                    ref={(el) => {
+                      dotsRef.current[i] = el;
+                    }}
                     className={`w-3 h-3 rounded-full transition-colors duration-300 ${i === 0 ? "bg-[#19C978]" : "bg-brand-border"}`}
                   />
                   {i < 3 && (
-                    <div className="w-[1px] h-10 bg-brand-border my-2" />
+                    <div className="w-px h-10 bg-brand-border my-2" />
                   )}
                 </div>
               ))}
@@ -120,8 +122,10 @@ export function StickyScroll() {
           <div ref={rightColRef} className="md:w-2/3 flex flex-col pt-12">
             {/* Step 1 */}
             <div
-              ref={(el) => (stepsRef.current[0] = el)}
-              className="h-[80vh] min-h-[500px] flex flex-col justify-center gap-8"
+              ref={(el) => {
+                stepsRef.current[0] = el;
+              }}
+              className="h-[80vh] min-h-125 flex flex-col justify-center gap-8"
             >
               <div className="bg-brand-surface border border-brand-border rounded-2xl p-8 max-w-sm w-full mx-auto md:mx-0 relative shadow-2xl overflow-hidden">
                 <div className="flex items-center gap-3 mb-6 pb-6 border-b border-brand-border">
@@ -150,8 +154,10 @@ export function StickyScroll() {
 
             {/* Step 2 */}
             <div
-              ref={(el) => (stepsRef.current[1] = el)}
-              className="h-[80vh] min-h-[500px] flex flex-col justify-center gap-8"
+              ref={(el) => {
+                stepsRef.current[1] = el;
+              }}
+              className="h-[80vh] min-h-125 flex flex-col justify-center gap-8"
             >
               <div className="bg-brand-surface border border-[#19C978]/30 rounded-2xl p-8 max-w-sm w-full mx-auto md:mx-0 shadow-[0_0_40px_rgba(25,201,120,0.08)]">
                 <h4 className="font-mono text-xs text-[#19C978] mb-4">
@@ -185,8 +191,10 @@ export function StickyScroll() {
 
             {/* Step 3 */}
             <div
-              ref={(el) => (stepsRef.current[2] = el)}
-              className="h-[80vh] min-h-[500px] flex flex-col justify-center gap-8"
+              ref={(el) => {
+                stepsRef.current[2] = el;
+              }}
+              className="h-[80vh] min-h-125 flex flex-col justify-center gap-8"
             >
               <div
                 ref={terminalRef}
@@ -199,19 +207,25 @@ export function StickyScroll() {
                 </div>
                 <div className="space-y-2 mt-4 text-text-muted">
                   <div
-                    ref={(el) => (terminalLinesRef.current[0] = el)}
+                    ref={(el) => {
+                      terminalLinesRef.current[0] = el;
+                    }}
                     className="text-[#10B981]"
                   >
                     03:14 ✓ contract 0x4a1f...CLEAN
                   </div>
                   <div
-                    ref={(el) => (terminalLinesRef.current[1] = el)}
+                    ref={(el) => {
+                      terminalLinesRef.current[1] = el;
+                    }}
                     className="text-[#10B981]"
                   >
                     03:31 ✓ contract 0x9b3c...CLEAN
                   </div>
                   <div
-                    ref={(el) => (terminalLinesRef.current[2] = el)}
+                    ref={(el) => {
+                      terminalLinesRef.current[2] = el;
+                    }}
                     className="text-[#F59E0B]"
                   >
                     03:17 ⚠ contract 0xf4a1...ANALYZING
@@ -229,10 +243,13 @@ export function StickyScroll() {
 
             {/* Step 4 */}
             <div
-              ref={(el) => (stepsRef.current[3] = el)}
-              className="h-[80vh] min-h-[500px] flex flex-col justify-center gap-8"
+              ref={(el) => {
+                stepsRef.current[3] = el;
+              }}
+              className="h-[80vh] min-h-125 flex flex-col justify-center gap-8"
             >
-              <div className="bg-brand-surface border border-[#10B981]/30 bg-[#10B981]/5 rounded-2xl p-8 max-w-sm w-full mx-auto md:mx-0 text-center relative overflow-hidden">
+              <div className="bg-brand-surface border border-[#10B981]/30 rounded-2xl p-8 max-w-sm w-full mx-auto md:mx-0 text-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-[#10B981]/5" />
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                   <svg
                     width="120"
@@ -248,7 +265,7 @@ export function StickyScroll() {
                 <h4 className="font-mono text-xs text-[#10B981] mb-2 relative z-10">
                   FUNDS SECURED
                 </h4>
-                <div className="text-[64px] font-[800] text-[#10B981] leading-none mb-1 drop-shadow-[0_0_20px_rgba(16,185,129,0.3)] relative z-10">
+                <div className="text-[64px] font-extrabold text-[#10B981] leading-none mb-1 drop-shadow-[0_0_20px_rgba(16,185,129,0.3)] relative z-10">
                   $0
                 </div>
                 <div className="text-[#10B981] opacity-80 font-medium text-sm relative z-10">

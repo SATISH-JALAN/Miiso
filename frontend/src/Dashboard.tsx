@@ -38,7 +38,7 @@ export function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Zone 2 - Live Threat Feed */}
-        <div className="lg:col-span-1 bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex flex-col h-[500px]">
+        <div className="lg:col-span-1 bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex flex-col h-125">
           <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0B0B0C]">
             <h2 className="text-[#E1E0CC] font-medium text-lg">Live Threat Feed</h2>
             <Activity className="w-5 h-5 text-[#19C978] animate-pulse" />
@@ -87,14 +87,14 @@ export function Dashboard() {
                     <th className="px-6 font-normal">Action</th>
                   </tr>
                 </thead>
-                <tbody className="text-[#DEDBC8]">
+                <tbody className="text-primary">
                   {[
                     { token: 'USDC', spender: 'Uniswap V3', amount: 'Unlimited', risk: 'Low', color: 'text-[#19C978]' },
                     { token: 'WETH', spender: 'Aave V3', amount: 'Unlimited', risk: 'Low', color: 'text-[#19C978]' },
                     { token: 'PENDLE', spender: 'Unknown 0x4a..1f', amount: '100,000', risk: 'High', color: 'text-[#EF4444]' },
                     { token: 'USDT', spender: 'YieldNest', amount: 'Unlimited', risk: 'Medium', color: 'text-[#F59E0B]' }
                   ].map((row, i) => (
-                    <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors h-16">
+                    <tr key={i} className="border-b border-white/5 hover:bg-white/2 transition-colors h-16">
                       <td className="px-6 font-medium text-[#E1E0CC]">{row.token}</td>
                       <td className="px-6">{row.spender}</td>
                       <td className="px-6 font-mono text-xs">{row.amount}</td>
@@ -127,12 +127,12 @@ export function Dashboard() {
                     <th className="px-6 font-normal">Tx Hash</th>
                   </tr>
                 </thead>
-                <tbody className="text-[#DEDBC8]">
+                <tbody className="text-primary">
                   {[
                     { date: '2026-06-07 03:17', threat: 'YieldNest Reentrancy', value: '$7,000', fee: '$0.0110', tx: '0x9f2c...a13d' },
                     { date: '2026-05-14 14:22', threat: 'Phishing Router', value: '$5,400', fee: '$0.0095', tx: '0x1a4b...9e8f' }
                   ].map((row, i) => (
-                    <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors h-16">
+                    <tr key={i} className="border-b border-white/5 hover:bg-white/2 transition-colors h-16">
                       <td className="px-6 text-gray-400">{row.date}</td>
                       <td className="px-6 text-[#EF4444]">{row.threat}</td>
                       <td className="px-6 text-[#19C978]">{row.value}</td>
