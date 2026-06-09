@@ -18,11 +18,15 @@ class SseManager {
   public register(userAddress: string, reply: FastifyReply) {
     const normalized = userAddress.toLowerCase();
     
+    const origin = (reply.request.headers.origin as string) || "*";
+
     // Set headers required for Server-Sent Events and proxy bypasses
     reply.raw.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
       "Connection": "keep-alive",
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Credentials": "true",
       "X-Accel-Buffering": "no" // Bypass Nginx/CDN buffering
     });
 
