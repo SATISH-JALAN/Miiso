@@ -1,10 +1,23 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { useState } from 'react';
+import { useWallet } from './WalletContext';
 
 export function Navbar() {
   const location = useLocation();
-  const [walletConnected, setWalletConnected] = useState(false);
+  const { walletAddress, isConnected, connectWallet, disconnectWallet } = useWallet();
+
+  const handleWalletClick = () => {
+    if (isConnected) {
+      disconnectWallet();
+    } else {
+      connectWallet();
+    }
+  };
+
+  const getAddressDisplay = () => {
+    if (!walletAddress) return "";
+    return `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`;
+  };
 
   return (
     <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-7xl px-4 md:px-6 pt-6 pointer-events-none flex justify-center">
@@ -33,13 +46,13 @@ export function Navbar() {
         
         {/* Connect Wallet */}
         <button 
-          onClick={() => setWalletConnected(!walletConnected)}
+          onClick={handleWalletClick}
           className="group flex items-center gap-2 bg-primary text-black rounded-full pl-5 pr-2 py-2 hover:gap-3 transition-all duration-300 shadow-2xl"
         >
           <span className="font-medium text-sm">
-            {walletConnected ? '0x4a...9c2d' : 'Connect Wallet'}
+            {isConnected ? getAddressDisplay() : 'Connect Wallet'}
           </span>
-          {!walletConnected && (
+          {!isConnected && (
             <div className="bg-black rounded-full w-8 h-8 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
               <ArrowRight className="w-3 h-3 text-[#E1E0CC]" />
             </div>
