@@ -1,0 +1,35 @@
+{
+  "name": "miiso-backend",
+  "version": "1.0.0",
+  "description": "Miiso - Autonomous on-chain DeFi security agent backend",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:seed": "tsx scripts/db-seed.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "@fastify/rate-limit": "^9.1.0",
+    "@neondatabase/serverless": "^0.10.4",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.31.2",
+    "fastify": "^4.27.0",
+    "pg": "^8.12.0",
+    "siwe": "^2.3.2",
+    "viem": "^2.16.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.6",
+    "@types/ws": "^8.5.10",
+    "drizzle-kit": "^0.22.7",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.2"
+  }
+}
