@@ -34,6 +34,16 @@ export async function startBlockWatcher() {
   logger.info("⚡ BlockWatcher: Starting live blockchain threat scanning engine...");
 
   try {
+    // 0. Verify connection to blockchain client before starting subscription to avoid console spam
+    await publicClient.getBlockNumber();
+  } catch (rpcErr) {
+    logger.warn("⚠️ BlockWatcher: Blockchain RPC offline. Live threat scanning suspended (Anvil not running). Retrying in 15 seconds...");
+    isScanningActive = false;
+    setTimeout(() => startBlockWatcher(), 15000);
+    return;
+  }
+
+  try {
     // viem watchBlocks opens a persistent WebSocket/polling stream
     unwatchBlockLoop = publicClient.watchBlocks({
       emitOnBegin: true,
@@ -52,8 +62,17 @@ export async function startBlockWatcher() {
           logger.error("❌ BlockWatcher: Internal block handler error:", blockErr);
         }
       },
-      onError: (error) => {
-        logger.error("❌ BlockWatcher: Subscription WebSocket error:", error);
+      onError: (error: any) => {
+        const errMsg = error?.message || "";
+        const isConnectionError = errMsg.includes("fetch failed") || errMsg.includes("HTTP request failed") || errMsg.includes("failed to fetch");
+        
+        if (isConnectionError) {
+          logger.warn("⚠️ BlockWatcher: Lost connection to blockchain RPC. Suspending watcher and attempting reconnection in 15 seconds...");
+          stopBlockWatcher();
+          setTimeout(() => startBlockWatcher(), 15000);
+        } else {
+          logger.error("❌ BlockWatcher: Subscription WebSocket error:", error);
+        }
       }
     });
 
@@ -61,7 +80,6 @@ export async function startBlockWatcher() {
   } catch (error) {
     logger.error("❌ BlockWatcher: Failed to initialize subscription watchBlocks:", error);
     isScanningActive = false;
-    // Retry initialization after 10 seconds
     setTimeout(() => startBlockWatcher(), 10000);
   }
 }
