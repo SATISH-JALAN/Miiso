@@ -60,7 +60,30 @@ export function Setup() {
     if (!walletAddress) return;
     setLoading(true);
     try {
-      // Register EIP-7715 delegation permissions & seed test approvals/logs for this wallet address
+      // 1. Request signature from MetaMask if available and not using mock address
+      if (typeof window !== 'undefined' && (window as any).ethereum && walletAddress !== "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266") {
+        const provider = (window as any).ethereum;
+        const delegationMessage = 
+          `Granting Delegation Permission to Miiso Relayer\n\n` +
+          `Authorized Action: Revoke ERC20 Token Approvals\n` +
+          `Monthly Relayer Gas Cap: ${budgetCap} WETH\n` +
+          `Whitelisted Contracts Count: ${whitelist.length}\n` +
+          `Authorized Relayer Address: 0x6ED09F73cfe78555F950D3a325Aa38471fDF667d\n\n` +
+          `By signing this message, you authorize the Miiso Sentinel Relayer to submit EIP-7710/1Shot gasless revocation transactions on your behalf when threats are identified.`;
+        
+        try {
+          await provider.request({
+            method: 'personal_sign',
+            params: [delegationMessage, walletAddress]
+          });
+        } catch (signErr) {
+          console.error("Signature request rejected:", signErr);
+          alert("MetaMask signature request was rejected. Permission must be signed to complete setup.");
+          return;
+        }
+      }
+
+      // 2. Register EIP-7715 delegation permissions & seed test approvals/logs for this wallet address
       const res = await fetch("http://localhost:3001/api/dev/seed-wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

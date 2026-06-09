@@ -58,31 +58,64 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 const BACKEND_URL = "http://localhost:3001";
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('miiso_wallet_address');
+    }
+    return null;
+  });
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [approvals, setApprovals] = useState<ApprovalInfo[]>([]);
   const [history, setHistory] = useState<ProtectionEvent[]>([]);
   const [securityProfile, setSecurityProfile] = useState<'safe' | 'balanced' | 'manual'>('balanced');
   const [isLoading, setIsLoading] = useState(false);
 
+  // MetaMask event listeners
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      const provider = (window as any).ethereum;
+      
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (accounts && accounts[0]) {
+          setWalletAddress(accounts[0]);
+          localStorage.setItem('miiso_wallet_address', accounts[0]);
+        } else {
+          setWalletAddress(null);
+          localStorage.removeItem('miiso_wallet_address');
+          setStats(null);
+          setApprovals([]);
+          setHistory([]);
+          setSecurityProfile('balanced');
+        }
+      };
+
+      provider.on('accountsChanged', handleAccountsChanged);
+      return () => {
+        provider.removeListener('accountsChanged', handleAccountsChanged);
+      };
+    }
+  }, []);
+
   // Connects wallet - supports window.ethereum if available, falls back to demo account
   const connectWallet = async () => {
     setIsLoading(true);
     try {
+      let address = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
       if (typeof window !== 'undefined' && (window as any).ethereum) {
         const provider = (window as any).ethereum;
         const accounts = await provider.request({ method: 'eth_requestAccounts' });
         if (accounts && accounts[0]) {
-          setWalletAddress(accounts[0]);
-          return;
+          address = accounts[0];
         }
       }
-      // Fallback/demo address when MetaMask is missing (ideal for hackathon / anvil testing)
-      setWalletAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
+      setWalletAddress(address);
+      localStorage.setItem('miiso_wallet_address', address);
     } catch (error) {
       console.error("Wallet connection failed:", error);
       // Fallback anyway to ensure seamless demo experience
-      setWalletAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
+      const address = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
+      setWalletAddress(address);
+      localStorage.setItem('miiso_wallet_address', address);
     } finally {
       setIsLoading(false);
     }
@@ -94,6 +127,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setApprovals([]);
     setHistory([]);
     setSecurityProfile('balanced');
+    localStorage.removeItem('miiso_wallet_address');
   };
 
   const refreshAllData = async () => {
