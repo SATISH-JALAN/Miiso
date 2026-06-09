@@ -34,7 +34,7 @@ export function Alerts() {
                     <div className="text-xs text-gray-500 mt-1">{toggle.desc}</div>
                   </div>
                   <button 
-                    onClick={() => setToggles(prev => ({ ...prev, [toggle.id]: !prev[toggle.id as keyof typeof toggles] }))}
+                    onClick={() => setToggles((prev: typeof toggles) => ({ ...prev, [toggle.id]: !prev[toggle.id as keyof typeof toggles] }))}
                     className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${toggles[toggle.id as keyof typeof toggles] ? 'bg-[#19C978]' : 'bg-white/10'}`}
                   >
                     <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${toggles[toggle.id as keyof typeof toggles] ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -48,7 +48,7 @@ export function Alerts() {
         {/* Section 2 & 3 */}
         <div className="lg:col-span-2 space-y-8">
           {/* Pending Actions */}
-          <div className="bg-[#101010] rounded-2xl border border-white/5 overflow-hidden border-orange-500/20">
+          <div className="bg-[#101010] rounded-2xl border overflow-hidden border-orange-500/20">
             <div className="p-6 border-b border-white/5 bg-[#F59E0B]/5 flex justify-between items-center">
               <h2 className="text-[#E1E0CC] font-medium flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-[#F59E0B]" />
