@@ -34,7 +34,7 @@ export function Alerts() {
                     <div className="text-xs text-gray-500 mt-1">{toggle.desc}</div>
                   </div>
                   <button 
-                    onClick={() => setToggles(prev => ({ ...prev, [toggle.id]: !prev[toggle.id as keyof typeof toggles] }))}
+                    onClick={() => setToggles((prev: typeof toggles) => ({ ...prev, [toggle.id]: !prev[toggle.id as keyof typeof toggles] }))}
                     aria-label={`Toggle ${toggle.label}`}
                     title={`Toggle ${toggle.label}`}
                     className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${toggles[toggle.id as keyof typeof toggles] ? 'bg-[#19C978]' : 'bg-white/10'}`}
