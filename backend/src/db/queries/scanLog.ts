@@ -11,6 +11,7 @@ export async function insertScan(data: {
   verdict: string; // serialized JSON
   staticRisk: string; // 'high' | 'medium' | 'low'
   staticFlags: string[];
+  explainer?: string | null;
 }) {
   const [inserted] = await db
     .insert(contractScanLog)
@@ -23,6 +24,7 @@ export async function insertScan(data: {
       verdict: data.verdict,
       staticRisk: data.staticRisk,
       staticFlags: data.staticFlags,
+      explainer: data.explainer,
       createdAt: new Date(),
     })
     .returning();

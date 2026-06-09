@@ -223,7 +223,8 @@ async function processContractDeployment(address: string, blockNumber: bigint) {
     confidence: veniceResult.confidence.toString(),
     verdict: JSON.stringify(veniceResult),
     staticRisk: staticResult.staticRisk,
-    staticFlags: staticResult.staticFlags
+    staticFlags: staticResult.staticFlags,
+    explainer: veniceResult.explanation
   });
 
   // 9. If vulnerability confirmed, catalog threat intel with mock pgvector embedding vector and route threat action

@@ -14,6 +14,7 @@ import { vetoRoutes } from "./routes/veto.js";
 import { webhookRoutes } from "./routes/webhook.js";
 import { threatIntelRoutes } from "./routes/threatIntel.js";
 import { seedWalletRoutes } from "./routes/seedWallet.js";
+import { revokeBatchRoutes } from "./routes/batch.js";
 
 export function buildApp() {
   const app = Fastify({
@@ -68,6 +69,7 @@ export function buildApp() {
   app.register(dashboardRoutes, { prefix: "/api" });
   app.register(approvalsRoutes, { prefix: "/api" });
   app.register(revokeManualRoutes, { prefix: "/api" });
+  app.register(revokeBatchRoutes, { prefix: "/api" });
   app.register(vetoRoutes, { prefix: "/api" });
   app.register(webhookRoutes, { prefix: "/api" });
   app.register(threatIntelRoutes, { prefix: "/api" });

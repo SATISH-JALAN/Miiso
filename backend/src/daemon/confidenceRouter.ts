@@ -5,6 +5,7 @@ import { executeRevocation } from "./revocationExecutor.js";
 import { sseManager } from "../server/sse/sseManager.js";
 import { eq, and, gt, isNull } from "drizzle-orm";
 import { logger } from "../utils/logger.js";
+import { sendTelegramAlert } from "../utils/telegram.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -64,7 +65,7 @@ export async function routeThreatConfidence(input: ConfidenceRoutingInput) {
   combinedConfidence = Math.min(1.00, combinedConfidence);
   logger.info(`🤖 Router: Threat evaluation for spender ${spender}. Venice: ${input.veniceConfidence}, Combined Confidence: ${combinedConfidence}`);
 
-  // 3. Route actions individually per affected user based on threshold
+  // 3. Route actions individually per affected user based on threshold & securityProfile settings
   for (const record of affectedApprovals) {
     const user = record.userAddress.toLowerCase();
     
@@ -75,7 +76,24 @@ export async function routeThreatConfidence(input: ConfidenceRoutingInput) {
       continue;
     }
 
-    if (combinedConfidence >= TIER1_THRESHOLD) {
+    const profile = permission.securityProfile || "balanced";
+    
+    let actionTier: 1 | 2 | 3 = 3;
+    if (profile === "safe") {
+      if (combinedConfidence >= 0.40) {
+        actionTier = 1;
+      }
+    } else if (profile === "balanced") {
+      if (combinedConfidence >= TIER1_THRESHOLD) {
+        actionTier = 1;
+      } else if (combinedConfidence >= TIER2_THRESHOLD) {
+        actionTier = 2;
+      }
+    } else if (profile === "manual") {
+      actionTier = 3;
+    }
+
+    if (actionTier === 1) {
       // ──── TIER 1: IMMEDIATE AUTO-REVOCATION ────
       logger.warn(`🚨 Router: Tier 1 Immediate Revocation triggered for user ${user} (Confidence: ${combinedConfidence})`);
       
@@ -89,11 +107,22 @@ export async function routeThreatConfidence(input: ConfidenceRoutingInput) {
           delegationHash: permission.delegationHash,
           severity: "high"
         });
+
+        await sendTelegramAlert(
+          `🚨 <b>Miiso Sentinel Blocked Threat! (Immediate)</b>\n\n` +
+          `User: <code>${user}</code>\n` +
+          `Token: <code>${record.tokenAddress}</code>\n` +
+          `Spender: <code>${spender}</code>\n` +
+          `Exposed Value: <code>${record.allowance}</code>\n` +
+          `Status: <b>Auto-Revocation Dispatched (1Shot)</b>\n` +
+          `Profile: <b>${profile.toUpperCase()}</b>\n` +
+          `Combined Confidence: <b>${(combinedConfidence * 100).toFixed(1)}%</b>`
+        );
       } catch (err) {
         logger.error(`❌ Router: Failed to execute Tier 1 revocation for user ${user}:`, err);
       }
 
-    } else if (combinedConfidence >= TIER2_THRESHOLD) {
+    } else if (actionTier === 2) {
       // ──── TIER 2: STAGED 60-SECOND VETO COUNTDOWN ────
       logger.warn(`⏰ Router: Tier 2 Staged Veto Triggered for user ${user} (Confidence: ${combinedConfidence}). Starting countdown...`);
       
@@ -131,6 +160,16 @@ export async function routeThreatConfidence(input: ConfidenceRoutingInput) {
         // Set up in-memory veto timer
         setupStagedTimer(stagedEvent.id, user, record.tokenAddress, spender, record.allowance, VETO_SECONDS * 1000);
 
+        await sendTelegramAlert(
+          `⏰ <b>Miiso Sentinel Threat Staged! (Tier 2 Veto)</b>\n\n` +
+          `User: <code>${user}</code>\n` +
+          `Token: <code>${record.tokenAddress}</code>\n` +
+          `Spender: <code>${spender}</code>\n` +
+          `Veto Period: <b>${VETO_SECONDS}s</b>\n` +
+          `Status: <b>Pending (60s countdown)</b>\n` +
+          `Profile: <b>${profile.toUpperCase()}</b>\n` +
+          `Combined Confidence: <b>${(combinedConfidence * 100).toFixed(1)}%</b>`
+        );
       } catch (err) {
         logger.error(`❌ Router: Failed to staging Tier 2 veto countdown for user ${user}:`, err);
       }
@@ -147,6 +186,16 @@ export async function routeThreatConfidence(input: ConfidenceRoutingInput) {
         confidence: combinedConfidence,
         severity: "low"
       });
+
+      await sendTelegramAlert(
+        `⚠️ <b>Miiso Sentinel Security Alert! (No Action)</b>\n\n` +
+        `User: <code>${user}</code>\n` +
+        `Token: <code>${record.tokenAddress}</code>\n` +
+        `Spender: <code>${spender}</code>\n` +
+        `Status: <b>Manual Action Required (Monitoring Mode)</b>\n` +
+        `Profile: <b>${profile.toUpperCase()}</b>\n` +
+        `Combined Confidence: <b>${(combinedConfidence * 100).toFixed(1)}%</b>`
+      );
     }
   }
 }

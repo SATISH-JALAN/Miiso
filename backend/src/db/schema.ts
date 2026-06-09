@@ -9,6 +9,7 @@ export const permissionsRegistry = pgTable("permissions_registry", {
   sessionSignerAddress: text("session_signer_address").notNull(),
   budgetCap: numeric("budget_cap", { precision: 78, scale: 0 }).notNull(), // Wei scale
   budgetSpent: numeric("budget_spent", { precision: 78, scale: 0 }).default("0").notNull(),
+  securityProfile: text("security_profile").default("balanced").notNull(), // 'safe' | 'balanced' | 'manual'
   expiry: timestamp("expiry").notNull(),
   revokedAt: timestamp("revoked_at"),
   createdAt: timestamp("created_at").defaultNow().notNull()
@@ -25,6 +26,7 @@ export const contractScanLog = pgTable("contract_scan_log", {
   verdict: text("verdict").notNull(), // Serialized JSON vulnerabilities & recommendation
   staticRisk: text("static_risk").notNull(), // 'high' | 'medium' | 'low'
   staticFlags: text("static_flags").array().notNull(), // Array of matched static threat flags
+  explainer: text("explainer"), // Venice AI natural language explanation
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
 

@@ -88,3 +88,20 @@ export async function getAllActivePermissions() {
       )
     );
 }
+
+export async function updateSecurityProfile(userAddress: string, securityProfile: string) {
+  const normalizedUser = userAddress.toLowerCase();
+  
+  const [updated] = await db
+    .update(permissionsRegistry)
+    .set({ securityProfile })
+    .where(
+      and(
+        eq(permissionsRegistry.userAddress, normalizedUser),
+        isNull(permissionsRegistry.revokedAt)
+      )
+    )
+    .returning();
+    
+  return updated || null;
+}

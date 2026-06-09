@@ -1,6 +1,6 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "../client.js";
-import { protectionEvents, permissionsRegistry } from "../schema.js";
+import { protectionEvents, permissionsRegistry, contractScanLog } from "../schema.js";
 
 export async function insertProtectionEvent(data: {
   userAddress: string;
@@ -48,8 +48,26 @@ export async function getEventsByUser(userAddress: string, page = 1, limit = 20)
   const offset = (page - 1) * limit;
   
   return await db
-    .select()
+    .select({
+      id: protectionEvents.id,
+      userAddress: protectionEvents.userAddress,
+      tokenAddress: protectionEvents.tokenAddress,
+      spenderAddress: protectionEvents.spenderAddress,
+      exposedValue: protectionEvents.exposedValue,
+      actionType: protectionEvents.actionType,
+      relayTxHash: protectionEvents.relayTxHash,
+      relayStatus: protectionEvents.relayStatus,
+      severity: protectionEvents.severity,
+      vetoCancelled: protectionEvents.vetoCancelled,
+      stagedUntil: protectionEvents.stagedUntil,
+      createdAt: protectionEvents.createdAt,
+      explainer: contractScanLog.explainer,
+      confidence: contractScanLog.confidence,
+      staticFlags: contractScanLog.staticFlags,
+      staticRisk: contractScanLog.staticRisk
+    })
     .from(protectionEvents)
+    .leftJoin(contractScanLog, eq(contractScanLog.contractAddress, protectionEvents.spenderAddress))
     .where(eq(protectionEvents.userAddress, normalizedUser))
     .orderBy(desc(protectionEvents.createdAt))
     .limit(limit)

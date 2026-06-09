@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { db } from "../../db/client.js";
-import { permissionsRegistry, approvalCache, protectionEvents } from "../../db/schema.js";
+import { permissionsRegistry, approvalCache, protectionEvents, contractScanLog } from "../../db/schema.js";
 import { logger } from "../../utils/logger.js";
 
 interface SeedWalletRequestBody {
@@ -38,6 +38,7 @@ export async function seedWalletRoutes(fastify: FastifyInstance, options: Fastif
             sessionSignerAddress: "0x70997970c51812dc3a010c7d01b50e0d17dc79c8".toLowerCase(),
             budgetCap: "100000000",
             budgetSpent: "0",
+            securityProfile: "balanced",
             expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
           })
           .onConflictDoNothing();
@@ -57,7 +58,7 @@ export async function seedWalletRoutes(fastify: FastifyInstance, options: Fastif
             {
               userAddress: normalizedUser,
               tokenAddress: "0x4200000000000000000000000000000000000006".toLowerCase(), // WETH
-              spenderAddress: "0x9488a0b0b0000000000000000000000000000099".toLowerCase(),
+              spenderAddress: "0x9488a0b0b0000000000000000000000000000099".toLowerCase(), // Malicious Spender
               allowance: "1500000000000000000", // 1.5 WETH
               lastScannedBlock: 12000000n,
               updatedAt: new Date()
@@ -91,6 +92,49 @@ export async function seedWalletRoutes(fastify: FastifyInstance, options: Fastif
               severity: "medium",
               stagedUntil: new Date(Date.now() - 5 * 24 * 60 * 1000),
               createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+            }
+          ])
+          .onConflictDoNothing();
+
+        // 4. Seed contract scans with Venice AI explanations
+        await db
+          .insert(contractScanLog)
+          .values([
+            {
+              contractAddress: "0x6666666666666666666666666666666666666666".toLowerCase(),
+              bytecodeHash: "0xhash666666666666666666666666666666666666666",
+              blockNumber: 12000000n,
+              vulnerable: true,
+              confidence: "0.9850",
+              verdict: JSON.stringify({ vulnerable: true, confidence: 0.985, vulnerabilities: [{ type: "APPROVAL_DRAINER", severity: "CRITICAL", description: "Unrestricted transferFrom drainer" }] }),
+              staticRisk: "high",
+              staticFlags: ["UNRESTRICTED_TRANSFER_FROM"],
+              explainer: "This contract implements an approval drainer pattern that targets your ERC20 tokens by triggering transferFrom without user-initiated context.",
+              createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+            },
+            {
+              contractAddress: "0x7777777777777777777777777777777777777777".toLowerCase(),
+              bytecodeHash: "0xhash777777777777777777777777777777777777777",
+              blockNumber: 12000000n,
+              vulnerable: true,
+              confidence: "0.7820",
+              verdict: JSON.stringify({ vulnerable: true, confidence: 0.782, vulnerabilities: [{ type: "REENTRANCY", severity: "HIGH", description: "Potential reentrancy vulnerability in state updates" }] }),
+              staticRisk: "high",
+              staticFlags: ["CALL_BEFORE_SSTORE"],
+              explainer: "This contract exhibits state-changing operations executing after external calls, rendering it vulnerable to a reentrancy attack.",
+              createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+            },
+            {
+              contractAddress: "0x9488a0b0b0000000000000000000000000000099".toLowerCase(),
+              bytecodeHash: "0xhash9488a0b0b000000000000000000000000000099",
+              blockNumber: 12000000n,
+              vulnerable: true,
+              confidence: "0.9200",
+              verdict: JSON.stringify({ vulnerable: true, confidence: 0.92, vulnerabilities: [{ type: "BACKDOOR", severity: "CRITICAL", description: "Delegatecall vulnerability to a remote logic controller" }] }),
+              staticRisk: "high",
+              staticFlags: ["DYNAMIC_DELEGATECALL"],
+              explainer: "This contract performs a delegatecall to an uncontrolled logic proxy address, which grants remote admin access to your funds.",
+              createdAt: new Date()
             }
           ])
           .onConflictDoNothing();

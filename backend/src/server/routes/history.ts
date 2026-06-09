@@ -50,7 +50,11 @@ export async function historyRoutes(fastify: FastifyInstance, options: FastifyPl
             severity: event.severity,
             vetoCancelled: event.vetoCancelled,
             stagedUntil: event.stagedUntil ? event.stagedUntil.toISOString() : null,
-            createdAt: event.createdAt.toISOString()
+            createdAt: event.createdAt.toISOString(),
+            explainer: event.explainer,
+            confidence: event.confidence,
+            staticFlags: event.staticFlags,
+            staticRisk: event.staticRisk
           }))
         });
       } catch (error: any) {

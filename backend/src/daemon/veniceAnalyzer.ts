@@ -18,6 +18,7 @@ export interface VeniceAnalysisResult {
     opcodePattern: string;
   }>;
   recommendation: string;
+  explanation?: string;
 }
 
 const SYSTEM_PROMPT = `You are a strict, automated smart contract security auditor. Your job is to analyze decompiled Solidity source code and determine if it represents a malicious contract (e.g. honeypot, approval drainer, backdoor, reentrancy exploit, or malicious proxy).
@@ -33,7 +34,8 @@ Analyze the code carefully. You must output ONLY a valid JSON object matching th
       "opcodePattern": "string pattern or name of functions causing it"
     }
   ],
-  "recommendation": "string recommending the action (e.g. REVOKE_IMMEDIATELY or STAGE_DELAY or whitelist)"
+  "recommendation": "string recommending the action (e.g. REVOKE_IMMEDIATELY or STAGE_DELAY or whitelist)",
+  "explanation": "a concise one-sentence description in plain English explaining why this contract is dangerous or safe (e.g. 'This contract implements an approval drainer pattern that targets your ERC20 tokens' or 'This contract appears to be a standard router and poses no immediate risk')"
 }
 Return ONLY the raw JSON string. Do not include markdown codeblocks (such as \`\`\`json), do not include any introductions, notes, or concluding text.`;
 
@@ -92,7 +94,8 @@ export async function analyzeBytecodeWithVenice(
       vulnerable: false,
       confidence: 0,
       vulnerabilities: [],
-      recommendation: `ANALYSIS_FAILED: ${error.message}`
+      recommendation: `ANALYSIS_FAILED: ${error.message}`,
+      explanation: `Analysis failed due to error: ${error.message}`
     };
   }
 }
@@ -125,7 +128,8 @@ function cleanAndParseVeniceResponse(text: string): VeniceAnalysisResult {
       vulnerable: !!parsed.vulnerable,
       confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0,
       vulnerabilities: Array.isArray(parsed.vulnerabilities) ? parsed.vulnerabilities : [],
-      recommendation: parsed.recommendation || "NONE"
+      recommendation: parsed.recommendation || "NONE",
+      explanation: parsed.explanation || "No details provided by threat intelligence engine."
     };
   } catch (err) {
     logger.error("⚠️ Venice: Failed to parse raw model content as JSON. Raw response content:", { rawText: text });

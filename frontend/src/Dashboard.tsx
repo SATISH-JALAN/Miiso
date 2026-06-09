@@ -1,6 +1,6 @@
-import { Shield, AlertTriangle, CheckCircle, Activity, ArrowRight, Clock } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useWallet } from './WalletContext';
+import { Shield, AlertTriangle, CheckCircle, Activity, ArrowRight, Clock, X, HelpCircle, Info, ExternalLink } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useWallet, ProtectionEvent } from './WalletContext';
 import { useState } from 'react';
 
 export function Dashboard() {
@@ -12,12 +12,15 @@ export function Dashboard() {
     history, 
     connectWallet, 
     revokeApproval, 
+    batchRevokeApprovals,
     vetoAction,
     isLoading 
   } = useWallet();
 
   const [revokingStates, setRevokingStates] = useState<Record<string, boolean>>({});
   const [vetoingStates, setVetoingStates] = useState<Record<string, boolean>>({});
+  const [selectedThreat, setSelectedThreat] = useState<ProtectionEvent | null>(null);
+  const [isBatchRevoking, setIsBatchRevoking] = useState(false);
 
   const handleRevoke = async (tokenWithAddress: string, spender: string, rawAllowance: string) => {
     // Extract token address from "SYMBOL (0x...)"
@@ -30,6 +33,27 @@ export function Dashboard() {
       await revokeApproval(tokenAddress, spender, rawAllowance);
     } finally {
       setRevokingStates(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const handleBatchRevoke = async () => {
+    if (approvals.length === 0) return;
+    setIsBatchRevoking(true);
+    try {
+      const payload = approvals.map(app => {
+        const match = app.token.match(/\((0x[a-fA-F0-9]{40})\)/);
+        const tokenAddress = match ? match[1] : app.token;
+        return {
+          tokenAddress,
+          spenderAddress: app.spender,
+          rawAllowance: app.rawAllowance
+        };
+      });
+      await batchRevokeApprovals(payload);
+    } catch (err) {
+      console.error("Batch revoke error:", err);
+    } finally {
+      setIsBatchRevoking(false);
     }
   };
 
@@ -170,16 +194,24 @@ export function Dashboard() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className={log.severity === "high" ? "text-[#EF4444]" : "text-[#F59E0B]"}>
-                        {isRevocation ? "Reentrancy" : "Dangerous Flow"}
+                        {log.staticFlags && log.staticFlags.length > 0 
+                          ? log.staticFlags[0].replace(/_/g, " ") 
+                          : (isRevocation ? "Reentrancy" : "Dangerous Flow")}
                       </span>
                       <span className="bg-white/5 px-2 py-0.5 rounded text-gray-300">
-                        Score: {log.severity === "high" ? "98.7%" : "72.4%"}
+                        Score: {log.confidence ? `${(parseFloat(log.confidence) * 100).toFixed(1)}%` : (log.severity === "high" ? "98.7%" : "72.4%")}
                       </span>
                     </div>
-                    <div className="mt-1">
+                    <div className="flex justify-between items-center mt-1">
                       <span className={`px-2 py-0.5 inline-block rounded font-bold tracking-widest uppercase text-[10px] ${statusColor}`}>
                         {statusText}
                       </span>
+                      <button 
+                        onClick={() => setSelectedThreat(log)}
+                        className="text-[10px] text-[#19C978] hover:text-[#14a361] transition-colors flex items-center gap-1 font-sans font-semibold"
+                      >
+                        <HelpCircle className="w-3 h-3" /> Why?
+                      </button>
                     </div>
                   </div>
                 );
@@ -191,8 +223,24 @@ export function Dashboard() {
         <div className="lg:col-span-2 space-y-8">
           {/* Zone 3 - Token Approvals */}
           <div className="bg-[#101010] rounded-2xl border border-white/5 overflow-hidden">
-            <div className="p-6 border-b border-white/5 bg-[#0B0B0C]">
+            <div className="p-6 border-b border-white/5 bg-[#0B0B0C] flex justify-between items-center">
               <h2 className="text-[#E1E0CC] font-medium text-lg">Active Token Approvals</h2>
+              {approvals.length > 0 && (
+                <button
+                  onClick={handleBatchRevoke}
+                  disabled={isBatchRevoking}
+                  className="bg-red-500/10 hover:bg-red-500/20 text-[#EF4444] border border-red-500/20 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-300 flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isBatchRevoking ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-t-transparent border-[#EF4444] rounded-full animate-spin" />
+                      Securing...
+                    </>
+                  ) : (
+                    "Secure Wallet (Batch Revoke)"
+                  )}
+                </button>
+              )}
             </div>
             <div className="overflow-x-auto">
               {approvals.length === 0 ? (
@@ -294,6 +342,99 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Venice AI Threat Explainer Modal */}
+      <AnimatePresence>
+        {selectedThreat && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="bg-[#0B0B0C] border border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative"
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-white/5 bg-[#101010] flex justify-between items-center">
+                <div className="flex items-center gap-2 text-[#EF4444]">
+                  <Shield className="w-5 h-5 text-[#19C978]" />
+                  <span className="font-bold text-sm tracking-widest uppercase text-[#E1E0CC]">Venice Threat Explainer</span>
+                </div>
+                <button 
+                  onClick={() => setSelectedThreat(null)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-4">
+                {/* Spender Contract info */}
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Target Spender Contract</label>
+                  <div className="bg-[#101010] p-3 rounded-lg border border-white/5 font-mono text-xs flex justify-between items-center text-[#E1E0CC]">
+                    <span className="truncate mr-4">{selectedThreat.spenderAddress}</span>
+                  </div>
+                </div>
+
+                {/* Score and Risk */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#101010] p-3 rounded-lg border border-white/5">
+                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Threat Score</label>
+                    <span className="text-lg font-bold font-mono text-[#EF4444]">
+                      {selectedThreat.confidence ? `${(parseFloat(selectedThreat.confidence) * 100).toFixed(1)}%` : (selectedThreat.severity === "high" ? "98.7%" : "72.4%")}
+                    </span>
+                  </div>
+                  <div className="bg-[#101010] p-3 rounded-lg border border-white/5">
+                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Static Risk Tier</label>
+                    <span className={`text-lg font-bold capitalize ${selectedThreat.severity === 'high' ? 'text-[#EF4444]' : 'text-[#F59E0B]'}`}>
+                      {selectedThreat.staticRisk || selectedThreat.severity}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Static Flags */}
+                {selectedThreat.staticFlags && selectedThreat.staticFlags.length > 0 && (
+                  <div>
+                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Static Analysis Flags</label>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {selectedThreat.staticFlags.map((flag, idx) => (
+                        <span key={idx} className="bg-red-500/10 text-[#EF4444] border border-red-500/10 px-2 py-0.5 rounded text-[10px] font-mono font-semibold">
+                          {flag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Plain English Venice Explainer */}
+                <div className="border border-[#19C978]/20 bg-[#19C978]/5 p-4 rounded-xl">
+                  <div className="flex items-start gap-2.5">
+                    <Info className="w-5 h-5 text-[#19C978] shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-[#19C978] font-bold text-xs uppercase tracking-wider mb-1">Natural Language AI Report</h4>
+                      <p className="text-gray-300 text-sm leading-relaxed font-sans">
+                        {selectedThreat.explainer || "This contract was flagged due to abnormal static risk pattern checks. Manual audit recommended."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 bg-[#101010] border-t border-white/5 flex justify-end">
+                <button
+                  onClick={() => setSelectedThreat(null)}
+                  className="bg-[#19C978] hover:bg-[#14a361] text-black font-semibold text-xs py-2 px-5 rounded-full transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
