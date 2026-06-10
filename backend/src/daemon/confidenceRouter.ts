@@ -15,7 +15,7 @@ const TIER2_THRESHOLD = parseFloat(process.env.TIER2_THRESHOLD || "0.70");
 const VETO_SECONDS = parseInt(process.env.TIER2_VETO_SECONDS || "60", 10);
 
 // In-memory registry to track active veto countdown timers
-const activeStagedTimers = new Map<string, NodeJS.Timeout>();
+export const stagedTimers = new Map<string, NodeJS.Timeout>();
 
 export interface ConfidenceRoutingInput {
   contractAddress: string;
@@ -205,12 +205,12 @@ export async function routeThreatConfidence(input: ConfidenceRoutingInput) {
  */
 function setupStagedTimer(eventId: string, user: string, token: string, spender: string, allowance: string, delayMs: number) {
   // Clear any existing timer for this event ID
-  if (activeStagedTimers.has(eventId)) {
-    clearTimeout(activeStagedTimers.get(eventId));
+  if (stagedTimers.has(eventId)) {
+    clearTimeout(stagedTimers.get(eventId));
   }
 
   const timer = setTimeout(async () => {
-    activeStagedTimers.delete(eventId);
+    stagedTimers.delete(eventId);
     logger.info(`⏰ Router: Veto window closed for event ${eventId}. Checking status for execution...`);
 
     try {
@@ -249,7 +249,7 @@ function setupStagedTimer(eventId: string, user: string, token: string, spender:
     }
   }, delayMs);
 
-  activeStagedTimers.set(eventId, timer);
+  stagedTimers.set(eventId, timer);
 }
 
 /**
@@ -302,10 +302,10 @@ export async function rescheduleStagedEvents() {
  * Cleanup method to clear active timers.
  */
 export function clearAllStagedTimers() {
-  for (const timer of activeStagedTimers.values()) {
+  for (const timer of stagedTimers.values()) {
     clearTimeout(timer);
   }
-  activeStagedTimers.clear();
+  stagedTimers.clear();
 }
 
 /**

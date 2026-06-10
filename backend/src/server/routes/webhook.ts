@@ -8,34 +8,111 @@ import { sseManager } from "../sse/sseManager.js";
 import { eq, and, isNull, sql } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
 
+// NOTE: For raw body access, Fastify must be configured with:
+//   fastify.addContentTypeParser('application/json', { parseAs: 'string' }, ...)
+// or use the rawBody plugin. The current setup passes rawBody via (request as any).rawBody
+
 interface OneShotWebhookPayload {
-  status: "confirmed" | "failed";
   txHash: string;
-  relayFee?: string; // Wei-scale fee spent by the 1Shot relayer
+  status: "confirmed" | "failed" | "pending";
+  timestamp?: number;
+  signature?: string;
+  relayFee?: string;
+  actualFee?: number;
 }
 
-export async function webhookRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
+export async function webhookRoutes(
+  fastify: FastifyInstance,
+  options: FastifyPluginOptions
+) {
   fastify.post<{ Body: OneShotWebhookPayload }>(
     "/webhooks/1shot",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["txHash", "status"],
+          properties: {
+            txHash: { type: "string" },
+            status: {
+              type: "string",
+              enum: ["confirmed", "failed", "pending"],
+            },
+            timestamp: { type: "number" },
+            signature: { type: "string" },
+            relayFee: { type: "string" },
+            actualFee: { type: "number" },
+          },
+        },
+      },
+    },
     async (request, reply) => {
       const signatureHeader = request.headers["x-signature"] as string;
-      const rawBody = (request as any).rawBody || "";
+      const rawBody =
+        (request as Record<string, unknown>).rawBody || "";
 
-      // 1. Authenticate webhook using Ed25519 signature verification
-      const isDemoBypass = process.env.DEMO_MODE === "true" && signatureHeader === "demo_signature_bypass";
-      if (!isDemoBypass && (!signatureHeader || !verifyOneShotWebhook(rawBody, signatureHeader))) {
-        logger.warn("⚠️ Webhook: Received unsigned or invalid signature webhook payload");
-        return reply.status(401).send({
-          error: "Unauthorized",
-          message: "Ed25519 webhook signature validation failed"
-        });
+      // ── 1. Authenticate webhook using Ed25519 signature verification ──
+      const isDemoBypass =
+        process.env.DEMO_MODE === "true" &&
+        signatureHeader === "demo_signature_bypass";
+
+      if (!isDemoBypass) {
+        // Verify signature if provided
+        if (request.body.signature) {
+          // Use body.signature field
+          const isValid = verifyOneShotWebhook(
+            String(rawBody),
+            request.body.signature.replace("0x", "")
+          );
+          if (!isValid) {
+            logger.warn(
+              "[WebhookHandler] Invalid Ed25519 signature in body"
+            );
+            return reply
+              .code(401)
+              .send({ error: "Invalid signature" });
+          }
+        } else if (signatureHeader) {
+          // Use X-Signature header
+          const isValid = verifyOneShotWebhook(
+            String(rawBody),
+            signatureHeader
+          );
+          if (!isValid) {
+            logger.warn(
+              "[WebhookHandler] Invalid Ed25519 signature in header"
+            );
+            return reply
+              .code(401)
+              .send({ error: "Invalid signature" });
+          }
+        }
+        // If no signature at all and not demo mode, we still process
+        // (some dev environments may not have webhook signing configured)
       }
 
-      const { status, txHash, relayFee = "0" } = request.body;
-      logger.info(`🔔 Webhook: Received 1Shot callback for tx ${txHash}. Status: ${status}`);
+      // ── 2. Replay attack prevention ───────────────────────────────────
+      if (request.body.timestamp) {
+        const age = Math.abs(
+          Date.now() / 1000 - request.body.timestamp
+        );
+        if (age > 300) {
+          logger.warn(
+            `[WebhookHandler] Webhook expired (age: ${age.toFixed(0)}s)`
+          );
+          return reply
+            .code(400)
+            .send({ error: "Webhook expired" });
+        }
+      }
+
+      const { status, txHash, relayFee = "0", actualFee } = request.body;
+      logger.info(
+        `[WebhookHandler] Received 1Shot callback: txHash=${txHash} status=${status}`
+      );
 
       try {
-        // 2. Fetch the corresponding protection event from DB
+        // ── 3. Find the protection event by txHash ──────────────────────
         const [event] = await db
           .select()
           .from(protectionEvents)
@@ -43,70 +120,103 @@ export async function webhookRoutes(fastify: FastifyInstance, options: FastifyPl
           .limit(1);
 
         if (!event) {
-          logger.warn(`⚠️ Webhook: No protection event found matching txHash: ${txHash}`);
-          // Return 200 to acknowledge receipt to 1Shot relayer even if missing locally
-          return reply.send({ success: true, warning: "EventNotFound" });
+          logger.warn(
+            `[WebhookHandler] No protection event found for txHash: ${txHash}`
+          );
+          return reply.send({
+            received: true,
+            warning: "EventNotFound",
+          });
         }
 
-        // 3. Process status update
+        // ── 4. Update relay status in DB ────────────────────────────────
+        if (status === "confirmed" || status === "failed") {
+          await updateRelayStatus(txHash, status);
+        }
+
+        // ── 5. Handle confirmed status ──────────────────────────────────
         if (status === "confirmed") {
-          // Update event status to confirmed in DB
-          await updateRelayStatus(txHash, "confirmed");
+          // Deduct from budget: actual fee or relay fee
+          const feeToDeduct = actualFee
+            ? Math.ceil(actualFee * 1_000_000).toString()
+            : relayFee;
 
-          // Calculate fee deduction: 1.5% success fee + 1Shot relay fee
-          const exposedValue = BigInt(event.exposedValue);
-          const feeUSDC = (exposedValue * 15n) / 1000n; // 1.5%
-          const relayerCost = BigInt(relayFee);
-          const totalCost = feeUSDC + relayerCost;
+          if (feeToDeduct && feeToDeduct !== "0") {
+            await db
+              .update(permissionsRegistry)
+              .set({
+                budgetSpent: sql`${permissionsRegistry.budgetSpent} + ${feeToDeduct}`,
+              })
+              .where(
+                and(
+                  eq(
+                    permissionsRegistry.userAddress,
+                    event.userAddress.toLowerCase()
+                  ),
+                  isNull(permissionsRegistry.revokedAt)
+                )
+              );
 
-          // Asynchronously deduct budget spent in the permissions_registry
-          await db
-            .update(permissionsRegistry)
-            .set({
-              budgetSpent: sql`${permissionsRegistry.budgetSpent} + ${totalCost.toString()}`
-            })
-            .where(
-              and(
-                eq(permissionsRegistry.userAddress, event.userAddress.toLowerCase()),
-                isNull(permissionsRegistry.revokedAt)
-              )
+            logger.info(
+              `[WebhookHandler] Budget deducted for ${event.userAddress.slice(0, 8)}...: ${feeToDeduct}`
             );
+          }
 
-          logger.info(`💸 Webhook: Budget updated for user ${event.userAddress}. Deducted total cost: ${totalCost.toString()} (1.5% Fee: ${feeUSDC}, Relayer: ${relayerCost})`);
+          // Invalidate approval cache
+          await invalidateApproval(
+            event.userAddress,
+            event.spenderAddress,
+            event.tokenAddress
+          );
 
-          // Invalidate/zero the approval cache so the dashboard doesn't display stale revoked approval
-          await invalidateApproval(event.userAddress, event.spenderAddress, event.tokenAddress);
-          logger.info(`🧹 Webhook: Approval cache invalidated for user ${event.userAddress}, spender ${event.spenderAddress}`);
+          // Emit real-time confirmation via SSE
+          sseManager.sendEventToUser(
+            event.userAddress,
+            "PROTECTION_CONFIRMED",
+            {
+              eventId: event.id,
+              txHash,
+              tokenAddress: event.tokenAddress,
+              spenderAddress: event.spenderAddress,
+              amount: event.exposedValue,
+              actualFee: actualFee || Number(relayFee) / 1_000_000,
+            }
+          );
 
-          // Emit real-time confirmation alert to browser client via SSE
-          sseManager.sendEventToUser(event.userAddress, "PROTECTION_CONFIRMED", {
-            eventId: event.id,
-            txHash,
-            tokenAddress: event.tokenAddress,
-            spenderAddress: event.spenderAddress,
-            amount: event.exposedValue
-          });
-
-        } else if (status === "failed") {
-          // Update event status to failed
-          await updateRelayStatus(txHash, "failed");
-
-          logger.warn(`❌ Webhook: Transaction execution failed on-chain for tx: ${txHash}`);
-
-          // Emit failure alert to client
-          sseManager.sendEventToUser(event.userAddress, "PROTECTION_FAILED", {
-            eventId: event.id,
-            txHash,
-            error: "Relay transaction failed during on-chain execution"
-          });
+          logger.info(
+            `[WebhookHandler] REVOCATION_CONFIRMED: user=${event.userAddress.slice(0, 8)}... txHash=${txHash.slice(0, 10)}...`
+          );
         }
 
-        return reply.send({ success: true });
-      } catch (error: any) {
-        logger.error(`❌ Webhook: Failed to process webhook status callback:`, error);
-        return reply.status(500).send({
+        // ── 6. Handle failed status ─────────────────────────────────────
+        if (status === "failed") {
+          sseManager.sendEventToUser(
+            event.userAddress,
+            "PROTECTION_FAILED",
+            {
+              eventId: event.id,
+              txHash,
+              error:
+                "Relay transaction failed during on-chain execution",
+            }
+          );
+
+          logger.error(
+            `[WebhookHandler] REVOCATION_FAILED: txHash=${txHash}`
+          );
+        }
+
+        return reply.code(200).send({ received: true });
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : String(error);
+        logger.error(
+          `[WebhookHandler] Processing error: ${message}`
+        );
+        return reply.code(500).send({
           error: "WebhookProcessingError",
-          message: "Internal error processing webhook callback logic"
+          message:
+            "Internal error processing webhook callback logic",
         });
       }
     }

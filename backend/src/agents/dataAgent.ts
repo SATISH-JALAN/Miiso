@@ -105,12 +105,12 @@ async function fetchContractExposure(
       allLogs
         .map((log) => log.args.from)
         .filter(
-          (addr): addr is string =>
+          (addr): addr is `0x${string}` =>
             !!addr &&
             addr !== "0x0000000000000000000000000000000000000000"
         )
     ),
-  ].slice(0, 500);
+  ].slice(0, 500) as string[];
 
   // Get USDC balance held by the contract (TVL proxy)
   let totalTVLAtRisk = 0;
