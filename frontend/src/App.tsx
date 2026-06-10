@@ -5,6 +5,7 @@ import { Dashboard } from './Dashboard';
 import { Setup } from './Setup';
 import { Alerts } from './Alerts';
 import { Settings } from './Settings';
+import { Research } from './Research';
 import { WalletProvider } from './WalletContext';
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/research" element={<Research />} />
             <Route path="/setup" element={<Setup />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/settings" element={<Settings />} />

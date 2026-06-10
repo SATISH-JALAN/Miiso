@@ -30,6 +30,7 @@ export function Navbar() {
         <nav className="bg-black rounded-full px-6 py-3 hidden md:flex items-center gap-6 border border-white/10 shadow-2xl">
           {[
             { path: '/dashboard', label: 'Dashboard' },
+            { path: '/research', label: 'Agents' },
             { path: '/setup', label: 'Setup' },
             { path: '/alerts', label: 'Alerts' },
             { path: '/settings', label: 'Settings' }
