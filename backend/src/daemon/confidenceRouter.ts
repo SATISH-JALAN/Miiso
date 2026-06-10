@@ -307,3 +307,44 @@ export function clearAllStagedTimers() {
   }
   activeStagedTimers.clear();
 }
+
+/**
+ * Lightweight routing helper for the orchestrator agent.
+ * Returns the computed tier and list of affected user addresses WITHOUT
+ * triggering any revocations — the orchestrator handles execution separately.
+ */
+export async function routeByConfidence(
+  contractAddress: string,
+  combinedConfidence: number,
+  staticRisk: "high" | "medium" | "low",
+  vulnerabilities: string[]
+): Promise<{ tier: 1 | 2 | 3; affectedUsers: string[] }> {
+  const spender = contractAddress.toLowerCase();
+
+  // Find users who have approved this contract as a spender
+  const affectedApprovals = await db
+    .select()
+    .from(approvalCache)
+    .where(
+      and(
+        eq(approvalCache.spenderAddress, spender),
+        gt(approvalCache.allowance, "0")
+      )
+    );
+
+  const affectedUsers = affectedApprovals.map((a) => a.userAddress.toLowerCase());
+
+  // Determine highest applicable tier based on combined confidence
+  let tier: 1 | 2 | 3 = 3;
+  if (combinedConfidence >= TIER1_THRESHOLD) {
+    tier = 1;
+  } else if (combinedConfidence >= TIER2_THRESHOLD) {
+    tier = 2;
+  }
+
+  logger.info(
+    `[Router] routeByConfidence: ${spender.slice(0, 8)} confidence=${combinedConfidence.toFixed(2)} tier=${tier} affected=${affectedUsers.length} staticRisk=${staticRisk} vulns=${vulnerabilities.length}`
+  );
+
+  return { tier, affectedUsers };
+}
