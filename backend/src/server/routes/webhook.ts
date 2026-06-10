@@ -49,7 +49,7 @@ export async function webhookRoutes(
     async (request, reply) => {
       const signatureHeader = request.headers["x-signature"] as string;
       const rawBody =
-        (request as Record<string, unknown>).rawBody || "";
+        (request as any).rawBody || "";
 
       // ── 1. Authenticate webhook using Ed25519 signature verification ──
       const isDemoBypass =

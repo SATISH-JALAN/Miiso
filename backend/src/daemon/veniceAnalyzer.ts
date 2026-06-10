@@ -301,10 +301,14 @@ function parseVeniceResponse(responseJson: unknown): VeniceAnalysisResult {
     vulnerabilities: Array.isArray(parsed.vulnerabilities)
       ? parsed.vulnerabilities
       : [],
-    recommendation: parsed.recommendation || "NONE",
+    recommendation:
+      typeof parsed.recommendation === "string"
+        ? parsed.recommendation
+        : "NONE",
     explanation:
-      parsed.explanation ||
-      "No detailed explanation provided by threat intelligence engine.",
+      typeof parsed.explanation === "string"
+        ? parsed.explanation
+        : "No detailed explanation provided by threat intelligence engine.",
     costUsdc,
     inputTokens,
     outputTokens,
