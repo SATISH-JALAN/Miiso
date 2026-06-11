@@ -63,51 +63,66 @@ export async function scanUserApprovals(userAddress: string): Promise<ApprovalIn
       startBlock = maxLookbackBlock;
     }
 
+    const isDemo = process.env.DEMO_MODE === "true";
     console.log(`🔍 Scanner: User ${normalizedUser} scanning from ${startBlock} to ${currentBlock} (Delta: ${currentBlock - startBlock} blocks)`);
 
-    // 3. Paginated block scanning
-    let tempStart = startBlock;
-    while (tempStart <= currentBlock) {
-      const tempEnd = tempStart + CHUNK_SIZE - 1n > currentBlock ? currentBlock : tempStart + CHUNK_SIZE - 1n;
-      
-      try {
-        const logs = await publicClient.getLogs({
-          event: {
-            type: "event",
-            name: "Approval",
-            inputs: [
-              { indexed: true, name: "owner", type: "address" },
-              { indexed: true, name: "spender", type: "address" },
-              { name: "value", type: "uint256" }
-            ]
-          },
-          args: {
-            owner: normalizedUser
-          },
-          fromBlock: tempStart,
-          toBlock: tempEnd
-        });
-
-        for (const log of logs) {
-          if (!log.args.spender || !log.address) continue;
-          const spender = getAddress(log.args.spender);
-          const token = getAddress(log.address);
-          const allowance = log.args.value?.toString() || "0";
-
-          // Write directly to DB cache
-          await upsertApproval({
-            userAddress: normalizedUser,
-            tokenAddress: token,
-            spenderAddress: spender,
-            allowance,
-            lastScannedBlock: tempEnd
+    if (isDemo) {
+      console.log(`ℹ️ Scanner: DEMO_MODE active. Skipping historical on-chain logs query loop for ${normalizedUser}.`);
+    } else {
+      // 3. Paginated block scanning
+      let tempStart = startBlock;
+      while (tempStart <= currentBlock) {
+        const tempEnd = tempStart + CHUNK_SIZE - 1n > currentBlock ? currentBlock : tempStart + CHUNK_SIZE - 1n;
+        
+        try {
+          const logs = await publicClient.getLogs({
+            event: {
+              type: "event",
+              name: "Approval",
+              inputs: [
+                { indexed: true, name: "owner", type: "address" },
+                { indexed: true, name: "spender", type: "address" },
+                { name: "value", type: "uint256" }
+              ]
+            },
+            args: {
+              owner: normalizedUser
+            },
+            fromBlock: tempStart,
+            toBlock: tempEnd
           });
-        }
-      } catch (error) {
-        console.error(`⚠️ Scanner: Error scanning logs in range ${tempStart}-${tempEnd}:`, error);
-      }
 
-      tempStart = tempEnd + 1n;
+          for (const log of logs) {
+            if (!log.args.spender || !log.address) continue;
+            const spender = getAddress(log.args.spender);
+            const token = getAddress(log.address);
+            const allowance = log.args.value?.toString() || "0";
+
+            // Write directly to DB cache
+            await upsertApproval({
+              userAddress: normalizedUser,
+              tokenAddress: token,
+              spenderAddress: spender,
+              allowance,
+              lastScannedBlock: tempEnd
+            });
+          }
+        } catch (error: any) {
+          console.error(`⚠️ Scanner: Error scanning logs in range ${tempStart}-${tempEnd}:`, error);
+          const errMsg = error?.message || "";
+          const errDetails = error?.details || "";
+          if (
+            errMsg.includes("rate limit") || 
+            errDetails.includes("rate limit") || 
+            error?.code === -32016
+          ) {
+            console.warn("⚠️ Scanner: RPC rate limit hit. Aborting historical scan to prevent hammering.");
+            break;
+          }
+        }
+
+        tempStart = tempEnd + 1n;
+      }
     }
 
     // 4. Update dummy tracker entry to current block if no approvals exist

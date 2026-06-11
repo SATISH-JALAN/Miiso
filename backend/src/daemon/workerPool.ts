@@ -8,7 +8,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Worker script path pointing to the decompiler worker file
-const WORKER_PATH = path.resolve(__dirname, "../../workers/heimdallWorker.js");
+const isTs = __filename.endsWith(".ts");
+const WORKER_PATH = path.resolve(__dirname, `../../workers/heimdallWorker.${isTs ? "ts" : "js"}`);
 
 interface Task {
   bytecode: string;
@@ -81,7 +82,7 @@ class WorkerPool {
    * Runs a decompilation task inside a child worker thread.
    */
   private runTask(task: Task) {
-    const worker = new Worker(WORKER_PATH);
+    const worker = new Worker(WORKER_PATH, { execArgv: [...process.execArgv] });
     this.activeWorkers.add(worker);
 
     // Set a hard timeout timer for the task (SIGKILL equivalent)

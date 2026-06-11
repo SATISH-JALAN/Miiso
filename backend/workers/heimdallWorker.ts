@@ -29,41 +29,56 @@ async function runDecompiler(contractAddress: string, bytecode: string): Promise
   fs.mkdirSync(tempDir, { recursive: true });
 
   return new Promise((resolve) => {
+    // Windows command line character limit is 8191 characters.
+    // If bytecode length exceeds 7000 chars, skip exec to prevent ENAMETOOLONG.
+    if (bytecode.length > 7000) {
+      const simulatedCode = generateFallbackSolidity(contractAddress, bytecode);
+      cleanupDir(tempDir);
+      return resolve(simulatedCode);
+    }
+
     // 1. Construct CLI command. Pass raw bytecode hex string to heimdall
     // command syntax: heimdall decompile <bytecode> --output <dir> --skip-resolving
     const command = `heimdall decompile ${bytecode} --output "${tempDir}" --skip-resolving --default-interfaces false`;
 
-    exec(command, (error, stdout, stderr) => {
-      try {
-        if (!error) {
-          // Heimdall creates a folder structure inside output dir, look for .sol files
-          const files = fs.readdirSync(tempDir);
-          
-          // Look for any folder created by heimdall
-          for (const file of files) {
-            const fullPath = path.join(tempDir, file);
-            if (fs.statSync(fullPath).isDirectory()) {
-              const subFiles = fs.readdirSync(fullPath);
-              const solFile = subFiles.find(f => f.endsWith(".sol"));
-              if (solFile) {
-                const content = fs.readFileSync(path.join(fullPath, solFile), "utf8");
-                cleanupDir(tempDir);
-                return resolve(content);
+    try {
+      exec(command, (error, stdout, stderr) => {
+        try {
+          if (!error) {
+            // Heimdall creates a folder structure inside output dir, look for .sol files
+            const files = fs.readdirSync(tempDir);
+            
+            // Look for any folder created by heimdall
+            for (const file of files) {
+              const fullPath = path.join(tempDir, file);
+              if (fs.statSync(fullPath).isDirectory()) {
+                const subFiles = fs.readdirSync(fullPath);
+                const solFile = subFiles.find(f => f.endsWith(".sol"));
+                if (solFile) {
+                  const content = fs.readFileSync(path.join(fullPath, solFile), "utf8");
+                  cleanupDir(tempDir);
+                  return resolve(content);
+                }
               }
             }
           }
+        } catch (readErr) {
+          // Fall through to mock decompiler
         }
-      } catch (readErr) {
-        // Fall through to mock decompiler
-      }
 
-      // 2. Fallback Mock Decompiler
-      // If heimdall-rs is not installed or fails, generate a pseudo-Solidity representation
-      // based on bytecode analysis to let Venice AI reason about it without blocking the system.
+        // 2. Fallback Mock Decompiler
+        // If heimdall-rs is not installed or fails, generate a pseudo-Solidity representation
+        // based on bytecode analysis to let Venice AI reason about it without blocking the system.
+        const simulatedCode = generateFallbackSolidity(contractAddress, bytecode);
+        cleanupDir(tempDir);
+        resolve(simulatedCode);
+      });
+    } catch (execErr) {
+      // Handle synchronous spawn errors (e.g. command too long, spawn error)
       const simulatedCode = generateFallbackSolidity(contractAddress, bytecode);
       cleanupDir(tempDir);
       resolve(simulatedCode);
-    });
+    }
   });
 }
 

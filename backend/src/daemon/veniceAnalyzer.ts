@@ -1,5 +1,6 @@
 import {
   buildSiweHeader,
+  getVeniceAuthHeader,
   cacheBearerFromResponse,
   clearCachedBearer,
 } from "./siweAuth.js";
@@ -126,8 +127,8 @@ async function callVeniceAPI(
   contractAddress: string,
   userPrompt: string
 ): Promise<VeniceAnalysisResult> {
-  // Build SIWE authentication header
-  const { header: siweHeader } = await buildSiweHeader();
+  // Build SIWE or API key authentication header
+  const siweHeader = await getVeniceAuthHeader();
 
   // Determine correct auth header format
   const isBearer = siweHeader.startsWith("Bearer ");
@@ -143,7 +144,7 @@ async function callVeniceAPI(
         "Content-Type": "application/json",
         ...(isBearer
           ? { Authorization: siweHeader }
-          : { "X-Sign-In-With-Ethereum": siweHeader }),
+          : { "X-Sign-In-With-Ethereum": Buffer.from(siweHeader).toString("base64") }),
       },
       body: JSON.stringify({
         model: VENICE_MODEL,
@@ -181,7 +182,7 @@ async function callVeniceAPI(
             "Content-Type": "application/json",
             ...(freshIsBearer
               ? { Authorization: freshHeader }
-              : { "X-Sign-In-With-Ethereum": freshHeader }),
+              : { "X-Sign-In-With-Ethereum": Buffer.from(freshHeader).toString("base64") }),
           },
           body: JSON.stringify({
             model: VENICE_MODEL,

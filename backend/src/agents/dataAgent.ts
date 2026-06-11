@@ -71,6 +71,16 @@ export async function runDataAgent(
 async function fetchContractExposure(
   contractAddress: string
 ): Promise<DataOutput> {
+  const isDemo = process.env.DEMO_MODE === "true";
+  if (isDemo) {
+    return {
+      exposedWallets: [],
+      totalTVLAtRisk: 0,
+      contractAgeMs: 3600000, // 1 hour
+      hasLiquidity: false,
+    };
+  }
+
   const currentBlock = await publicClient.getBlockNumber();
 
   // Fetch Transfer event logs in 2 chunks of 500 blocks to stay within RPC limits
