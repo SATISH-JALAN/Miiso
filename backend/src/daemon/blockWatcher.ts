@@ -4,9 +4,8 @@ import { isWhitelisted } from "../security/whitelist.js";
 import { resolveProxyImplementation } from "./proxyResolver.js";
 import { fetchBytecodeWithRetry } from "./bytecodeRetry.js";
 import { decompileContract } from "./heimdall.js";
-import { analyzeContractStatic } from "./staticAnalyzer.js";
-import { analyzeBytecodeWithVenice } from "./veniceAnalyzer.js";
 import { routeThreatConfidence } from "./confidenceRouter.js";
+import { runOrchestrator } from "../agents/orchestrator.js";
 import { insertScan, getScanByAddress } from "../db/queries/scanLog.js";
 import { insertThreatIntel } from "../db/queries/threatIntel.js";
 import { db } from "../db/client.js";
@@ -206,33 +205,36 @@ async function processContractDeployment(address: string, blockNumber: bigint) {
   // 5. Decompile bytecode using Worker Pool (Heimdall-rs wrapper)
   const decompiledCode = await decompileContract(normalizedAddress, bytecode);
 
-  // 6. Run static threat checker
-  const staticResult = analyzeContractStatic(decompiledCode);
+  // 6. Run multi-agent orchestrator (Research + Data + Analysis + Executor)
+  const decision = await runOrchestrator(normalizedAddress, decompiledCode);
 
-  // 7. Run Venice AI inference analysis
-  const veniceResult = await analyzeBytecodeWithVenice(normalizedAddress, decompiledCode);
+  // Extract analysis output for DB logging
+  const analysisAgent = decision.agentResults.find((r) => r.agentId === "analysis");
+  const analysisOutput = analysisAgent?.output as { confidence: number; vulnerabilities: string[]; staticRisk: string; staticFlags: string[]; veniceRaw: unknown } | null;
 
-  logger.info(`🤖 BlockWatcher: Scan completed for ${normalizedAddress}. Verdict vulnerable: ${veniceResult.vulnerable}. Venice Confidence: ${veniceResult.confidence}. Static Risk: ${staticResult.staticRisk}`);
+  const isVulnerable = decision.combinedConfidence >= 0.5 && decision.shouldExecute;
+  const staticRisk = (analysisOutput?.staticRisk ?? "low") as "high" | "medium" | "low";
+  const staticFlags = analysisOutput?.staticFlags ?? [];
 
-  // 8. Log scan results to Database
+  logger.info(`🤖 BlockWatcher: Orchestrator completed for ${normalizedAddress}. Tier: ${decision.tier} | Confidence: ${decision.combinedConfidence.toFixed(2)} | Cost: $${decision.totalCostUsdc.toFixed(4)}`);
+
+  // 7. Log scan results to Database
   await insertScan({
     contractAddress: normalizedAddress,
     bytecodeHash,
     blockNumber,
-    vulnerable: veniceResult.vulnerable,
-    confidence: veniceResult.confidence.toString(),
-    verdict: JSON.stringify(veniceResult),
-    staticRisk: staticResult.staticRisk,
-    staticFlags: staticResult.staticFlags,
-    explainer: veniceResult.explanation
+    vulnerable: isVulnerable,
+    confidence: decision.combinedConfidence.toString(),
+    verdict: JSON.stringify(decision),
+    staticRisk,
+    staticFlags,
+    explainer: analysisOutput?.vulnerabilities?.join("; ") ?? null
   });
 
-  // 9. If vulnerability confirmed, catalog threat intel with mock pgvector embedding vector and route threat action
-  if (veniceResult.vulnerable) {
+  // 8. If vulnerability confirmed, catalog threat intel
+  if (isVulnerable) {
     try {
-      // Create a mock 1536-dimensional vector for pgvector storage
       const mockVector = Array(1536).fill(0).map(() => Math.random() - 0.5);
-      
       await insertThreatIntel({
         bytecodeHash,
         bytecode,
@@ -241,16 +243,6 @@ async function processContractDeployment(address: string, blockNumber: bigint) {
     } catch (intelErr) {
       logger.error(`⚠️ BlockWatcher: Failed to catalog threat intel embeddings for ${normalizedAddress}:`, intelErr);
     }
-
-    // Trigger router checks
-    await routeThreatConfidence({
-      contractAddress: normalizedAddress,
-      bytecode,
-      staticRisk: staticResult.staticRisk,
-      staticFlags: staticResult.staticFlags,
-      veniceVulnerable: veniceResult.vulnerable,
-      veniceConfidence: veniceResult.confidence
-    });
   }
 }
 

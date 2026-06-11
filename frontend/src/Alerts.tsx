@@ -2,6 +2,7 @@ import { Bell, Clock, ShieldAlert, Filter, HelpCircle, Shield, X, Info } from 'l
 import { useState, useEffect } from 'react';
 import { useWallet } from './WalletContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { VetoTimer } from './components/dashboard/VetoTimer';
 
 export function Alerts() {
   const {
@@ -143,37 +144,18 @@ export function Alerts() {
               {pendingActions.length === 0 ? (
                 <div className="text-center py-6 text-gray-500 text-sm font-mono">No pending veto actions active. Smart Account is secure.</div>
               ) : (
-                pendingActions.map((action) => {
-                  const isVetoing = vetoingStates[action.id];
-                  return (
-                    <div key={action.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-black p-4 rounded-xl border border-white/5">
-                      <div>
-                        <div className="text-[#F59E0B] font-medium mb-1 flex items-center gap-2 text-sm">
-                          Tier 2 Cooldown: {action.staticFlags && action.staticFlags.length > 0 ? action.staticFlags[0].replace(/_/g, " ") : "Suspicious Contract Flow"}
-                        </div>
-                        <div className="text-xs text-gray-400 font-mono">
-                          Spender: {formatAddr(action.spenderAddress)} &bull; Value: {formatValueSaved(action.exposedValue)}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 shrink-0 w-full sm:w-auto justify-between sm:justify-end">
-                        <div className="flex items-center gap-2 text-[#EF4444] font-mono text-sm font-bold bg-red-500/10 px-2 py-1 rounded">
-                          <Clock className="w-4 h-4 animate-pulse" />
-                          {timeRemaining[action.id] || "00:00"}
-                        </div>
-                        <button 
-                          onClick={() => handleVeto(action.id)}
-                          disabled={isVetoing}
-                          className="bg-[#EF4444]/10 hover:bg-[#EF4444]/20 border border-[#EF4444]/20 text-[#EF4444] px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
-                        >
-                          {isVetoing ? 'Canceling...' : 'Veto / Cancel'}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
+                pendingActions.map((action) => (
+                  <VetoTimer
+                    key={action.id}
+                    action={action}
+                    onVeto={handleVeto}
+                    isVetoing={!!vetoingStates[action.id]}
+                  />
+                ))
               )}
             </div>
           </div>
+
 
           {/* Alert Log */}
           <div className="bg-[#101010] rounded-2xl border border-white/5 overflow-hidden">
