@@ -96,9 +96,14 @@ class WorkerPool {
 
     task.timeoutId = timeoutId;
 
+    const rpcUrl = process.env.DEMO_MODE === "true"
+      ? "http://127.0.0.1:8545"
+      : (process.env.HTTP_RPC_URL || "https://mainnet.base.org");
+
     worker.postMessage({
       bytecode: task.bytecode,
-      contractAddress: task.contractAddress
+      contractAddress: task.contractAddress,
+      rpcUrl
     });
 
     worker.on("message", (msg: { success: boolean; decompiledCode?: string; error?: string }) => {
