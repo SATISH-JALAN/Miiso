@@ -9,11 +9,11 @@ if (!parentPort) {
   throw new Error("Worker must be spawned via WorkerPool");
 }
 
-parentPort.on("message", async (msg: { bytecode: string; contractAddress: string }) => {
-  const { bytecode, contractAddress } = msg;
+parentPort.on("message", async (msg: { bytecode: string; contractAddress: string; rpcUrl: string }) => {
+  const { bytecode, contractAddress, rpcUrl } = msg;
 
   try {
-    const decompiledSol = await runDecompiler(contractAddress, bytecode);
+    const decompiledSol = await runDecompiler(contractAddress, bytecode, rpcUrl);
     parentPort!.postMessage({ success: true, decompiledCode: decompiledSol });
   } catch (error: any) {
     parentPort!.postMessage({ success: false, error: error.message || "Decompilation failed" });
@@ -24,22 +24,14 @@ parentPort.on("message", async (msg: { bytecode: string; contractAddress: string
  * Attempts to decompile bytecode using Heimdall-rs.
  * Falls back to a mock Solidity generator if Heimdall is not installed on the host.
  */
-async function runDecompiler(contractAddress: string, bytecode: string): Promise<string> {
+async function runDecompiler(contractAddress: string, bytecode: string, rpcUrl: string): Promise<string> {
   const tempDir = path.join(os.tmpdir(), `miiso-heimdall-${crypto.randomBytes(8).toString("hex")}`);
   fs.mkdirSync(tempDir, { recursive: true });
 
   return new Promise((resolve) => {
-    // Windows command line character limit is 8191 characters.
-    // If bytecode length exceeds 7000 chars, skip exec to prevent ENAMETOOLONG.
-    if (bytecode.length > 7000) {
-      const simulatedCode = generateFallbackSolidity(contractAddress, bytecode);
-      cleanupDir(tempDir);
-      return resolve(simulatedCode);
-    }
-
-    // 1. Construct CLI command. Pass raw bytecode hex string to heimdall
-    // command syntax: heimdall decompile <bytecode> --output <dir> --skip-resolving
-    const command = `heimdall decompile ${bytecode} --output "${tempDir}" --skip-resolving --default-interfaces false`;
+    // 1. Construct CLI command. Pass contractAddress and --rpc-url to heimdall
+    // This avoids command length issues (ENAMETOOLONG) and fetches bytecode from node.
+    const command = `heimdall decompile ${contractAddress} --rpc-url "${rpcUrl}" --output "${tempDir}" --skip-resolving --default-interfaces false`;
 
     try {
       exec(command, (error, stdout, stderr) => {

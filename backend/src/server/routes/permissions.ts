@@ -85,6 +85,7 @@ export async function permissionsRoutes(fastify: FastifyInstance, options: Fasti
           success: true,
           permission: {
             id: permission.id, userAddress: permission.userAddress,
+            delegationHash: permission.delegationHash,
             budgetCap: permission.budgetCap, budgetSpent: permission.budgetSpent,
             securityProfile: permission.securityProfile, expiry: permission.expiry
           }

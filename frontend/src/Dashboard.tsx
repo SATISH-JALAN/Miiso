@@ -1,7 +1,8 @@
 import { Shield, AlertTriangle, CheckCircle, Activity, ArrowRight, Clock, X, HelpCircle, Info, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWallet, ProtectionEvent } from './WalletContext';
+import { useWallet, ProtectionEvent, ApprovalInfo } from './WalletContext';
 import { useState } from 'react';
+import { VetoTimer } from './components/dashboard/VetoTimer';
 
 export function Dashboard() {
   const { 
@@ -40,7 +41,7 @@ export function Dashboard() {
     if (approvals.length === 0) return;
     setIsBatchRevoking(true);
     try {
-      const payload = approvals.map(app => {
+      const payload = approvals.map((app: ApprovalInfo) => {
         const match = app.token.match(/\((0x[a-fA-F0-9]{40})\)/);
         const tokenAddress = match ? match[1] : app.token;
         return {
@@ -88,6 +89,11 @@ export function Dashboard() {
 
   // Format Helper for address display
   const formatAddr = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+
+  // Active Pending Actions (Tier 2 Veto Cooldown events)
+  const pendingActions = history.filter(
+    (log: ProtectionEvent) => log.actionType === "veto" && !log.vetoCancelled && log.stagedUntil && new Date(log.stagedUntil) > new Date()
+  );
 
   // Convert stats totalSaved in Wei to a human readable estimated USD representation (assuming WETH = $3000)
   const formatValueSaved = (weiStr: string) => {
@@ -140,6 +146,28 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* Active Pending Veto Actions Banner */}
+      {pendingActions.length > 0 && (
+        <div className="mb-8 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-[#F59E0B] uppercase tracking-wider font-mono flex items-center gap-2">
+              <Clock className="w-4 h-4 animate-spin [animation-duration:10s]" />
+              Active Veto Buffers ({pendingActions.length})
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            {pendingActions.map((action: ProtectionEvent) => (
+              <VetoTimer
+                key={action.id}
+                action={action}
+                onVeto={handleVeto}
+                isVetoing={!!vetoingStates[action.id]}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Zone 1 - Overview Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
@@ -166,7 +194,7 @@ export function Dashboard() {
             {history.length === 0 ? (
               <div className="text-gray-500 text-center py-8">No security logs recorded. System monitoring.</div>
             ) : (
-              history.map((log) => {
+              history.map((log: ProtectionEvent) => {
                 const isRevocation = log.actionType === "revocation";
                 const isVetoed = log.vetoCancelled;
                 
@@ -257,7 +285,7 @@ export function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="text-primary">
-                    {approvals.map((row, i) => {
+                    {approvals.map((row: ApprovalInfo, i: number) => {
                       const match = row.token.match(/^([A-Z0-9]+)/);
                       const symbol = match ? match[1] : "TOKEN";
                       const key = `${row.token.match(/\((0x[a-fA-F0-9]{40})\)/)?.[1] || row.token}-${row.spender}`;
@@ -306,7 +334,7 @@ export function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="text-primary">
-                    {history.map((row) => {
+                    {history.map((row: ProtectionEvent) => {
                       const isVetoable = row.actionType === "veto" && !row.vetoCancelled;
                       const isVetoing = vetoingStates[row.id];
 

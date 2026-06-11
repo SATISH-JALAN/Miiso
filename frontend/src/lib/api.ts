@@ -7,11 +7,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
   });
+  const text = await res.text();
+  let body: any;
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch (e) {
+    body = { error: text || res.statusText };
+  }
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(body.message || body.error || `API ${res.status}`);
   }
-  return res.json();
+  return body as T;
 }
 
 // ── Permissions ──────────────────────────────────────────────────
@@ -61,7 +67,10 @@ export function getHistory(address: string) {
 
 // ── Veto ─────────────────────────────────────────────────────────
 export function postVeto(eventId: string) {
-  return request<{ cancelled: boolean; eventId: string }>(`/api/veto/${eventId}`, { method: "POST" });
+  return request<{ cancelled: boolean; eventId: string }>(`/api/veto/${eventId}`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
 }
 
 // ── Manual Revoke ────────────────────────────────────────────────
