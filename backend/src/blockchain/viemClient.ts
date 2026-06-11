@@ -17,10 +17,7 @@ if (isDemo) {
 
 // Fallback transport configuration
 const transport = isDemo
-  ? fallback([
-      http("http://127.0.0.1:8545"),
-      http("https://mainnet.base.org")
-    ])
+  ? http(process.env.ANVIL_RPC_URL || "http://127.0.0.1:8545")
   : fallback([
       // Try QuickNode WebSocket first for low-latency Flashblocks
       process.env.QUICKNODE_WSS_URL ? webSocket(process.env.QUICKNODE_WSS_URL) : undefined,

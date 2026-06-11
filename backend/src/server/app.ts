@@ -38,8 +38,13 @@ export function buildApp() {
   // but still parsed as JSON for normal routes.
   app.addContentTypeParser("application/json", { parseAs: "buffer" }, (req, body, done) => {
     try {
-      (req as any).rawBody = body.toString("utf8");
-      const json = JSON.parse(body.toString("utf8"));
+      const text = body.toString("utf8");
+      (req as any).rawBody = text;
+      if (!text.trim()) {
+        done(null, {});
+        return;
+      }
+      const json = JSON.parse(text);
       done(null, json);
     } catch (err: any) {
       err.statusCode = 400;

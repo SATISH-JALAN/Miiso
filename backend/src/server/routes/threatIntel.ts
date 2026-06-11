@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { getRecentScans } from "../../db/queries/scanLog.js";
 import { logger } from "../../utils/logger.js";
+import { SiweMessage } from "siwe";
 
 export async function threatIntelRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
   fastify.get(
@@ -18,7 +19,7 @@ export async function threatIntelRoutes(fastify: FastifyInstance, options: Fasti
     async (request, reply) => {
       const { limit = 20 } = request.query as { limit?: number };
 
-      // x402 SIWE gating — in production, verify SIWE bearer token
+      // x402 SIWE gating — verify SIWE bearer token
       // In DEMO_MODE, bypass authentication
       if (process.env.DEMO_MODE !== "true") {
         const authHeader = request.headers["authorization"];
@@ -34,8 +35,34 @@ export async function threatIntelRoutes(fastify: FastifyInstance, options: Fasti
             }
           });
         }
-        // In a full implementation, validate the SIWE bearer token here
-        // For hackathon: any bearer token passes (just checks presence)
+
+        try {
+          const token = authHeader.substring(7); // Remove "Bearer "
+          const parts = token.split(":");
+          if (parts.length !== 2) {
+            throw new Error("Invalid token format. Expected '<base64_message>:<signature>'");
+          }
+          
+          const messageBase64 = parts[0];
+          const signature = parts[1];
+          const messageText = Buffer.from(messageBase64, "base64").toString("utf8");
+          
+          const siweMessage = new SiweMessage(messageText);
+          const fields = await siweMessage.verify({ signature });
+          
+          // Verify that the message has not expired
+          if (fields.data.expirationTime && new Date(fields.data.expirationTime) < new Date()) {
+            throw new Error("SIWE session has expired");
+          }
+          
+          logger.info(`✅ B2B Client Authenticated: ${fields.data.address}`);
+        } catch (authError: any) {
+          logger.warn(`❌ B2B SIWE validation failed: ${authError.message || authError}`);
+          return reply.status(401).send({
+            error: "Unauthorized",
+            message: `SIWE authentication failed: ${authError.message || "Invalid signature"}`
+          });
+        }
       }
 
       try {
