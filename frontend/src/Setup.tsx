@@ -4,9 +4,11 @@ import { Shield, ArrowRight, CheckCircle, Wallet, Loader2, ListPlus, Plus, Trash
 import { WordsPullUpMultiStyle } from './Shared';
 import { Link } from 'react-router-dom';
 import { useWallet } from './WalletContext';
+import { usePermission } from './hooks/usePermission';
 
 export function Setup() {
   const { walletAddress, isConnected, connectWallet, refreshAllData } = useWallet();
+  const { upgradeToSmartAccount, grantPermission } = usePermission();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -34,13 +36,23 @@ export function Setup() {
     }
   };
 
-  const handleUpgrade = () => {
+  const handleUpgrade = async () => {
     setLoading(true);
-    // Mock EIP-7710 Smart Account contract execution
-    setTimeout(() => {
+    try {
+      // EIP-7702 upgrade flow
+      const res = await upgradeToSmartAccount();
+      if (res.upgraded) {
+        console.log(`Smart account upgrade signed successfully via ${res.method}`);
+        setStep(3);
+      } else {
+        alert("Failed to upgrade EOA to Smart Account. Please try again.");
+      }
+    } catch (err: any) {
+      console.error("Upgrade error:", err);
+      alert("Upgrade failed: " + (err.message || err));
+    } finally {
       setLoading(false);
-      setStep(3);
-    }, 1500);
+    }
   };
 
   const handleAddWhitelist = () => {
@@ -60,53 +72,20 @@ export function Setup() {
     if (!walletAddress) return;
     setLoading(true);
     try {
-      // 1. Request signature from MetaMask if available and not using mock address
-      if (typeof window !== 'undefined' && (window as any).ethereum && walletAddress !== "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266") {
-        const provider = (window as any).ethereum;
-        const delegationMessage = 
-          `Granting Delegation Permission to Miiso Relayer\n\n` +
-          `Authorized Action: Revoke ERC20 Token Approvals\n` +
-          `Monthly Relayer Gas Cap: ${budgetCap} WETH\n` +
-          `Whitelisted Contracts Count: ${whitelist.length}\n` +
-          `Authorized Relayer Address: 0x6ED09F73cfe78555F950D3a325Aa38471fDF667d\n\n` +
-          `By signing this message, you authorize the Miiso Sentinel Relayer to submit EIP-7710/1Shot gasless revocation transactions on your behalf when threats are identified.`;
-        
-        try {
-          await provider.request({
-            method: 'personal_sign',
-            params: [delegationMessage, walletAddress]
-          });
-        } catch (signErr) {
-          console.error("Signature request rejected:", signErr);
-          alert("MetaMask signature request was rejected. Permission must be signed to complete setup.");
-          return;
-        }
-      }
+      // 1. Request ERC-7715/EIP-7715 permission or personal_sign fallback
+      const grant = await grantPermission(budgetCap, whitelist);
+      console.log(`Permission granted via ${grant.method}`);
 
-      // 2. Register EIP-7715 delegation permissions & seed test approvals/logs for this wallet address
-      const res = await fetch("http://localhost:3001/api/dev/seed-wallet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          userAddress: walletAddress,
-          budgetCap: budgetCap,
-          whitelistAddresses: whitelist
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        await refreshAllData();
-        setStep(4);
-      } else {
-        alert("Failed to register delegation permissions: " + (data.message || "Unknown error"));
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Network error: Could not reach the fastify relayer.");
+      await refreshAllData();
+      setStep(4);
+    } catch (err: any) {
+      console.error("Grant permission failed:", err);
+      alert("Failed to grant delegation permission: " + (err.message || err));
     } finally {
       setLoading(false);
     }
   };
+
 
   const formatAddr = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
 
