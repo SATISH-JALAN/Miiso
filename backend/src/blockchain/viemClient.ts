@@ -18,8 +18,8 @@ if (isDemo) {
 // Fallback transport configuration
 const transport = isDemo
   ? fallback([
-      webSocket("ws://127.0.0.1:8545"),
-      http("http://127.0.0.1:8545")
+      http("http://127.0.0.1:8545"),
+      http("https://mainnet.base.org")
     ])
   : fallback([
       // Try QuickNode WebSocket first for low-latency Flashblocks
