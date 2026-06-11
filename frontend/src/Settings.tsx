@@ -8,6 +8,7 @@ export function Settings() {
     isConnected,
     securityProfile,
     updateSecurityProfile,
+    disableGuard,
     stats
   } = useWallet();
 
@@ -20,6 +21,20 @@ export function Settings() {
   
   const [isUpdating, setIsUpdating] = useState(false);
   const [profileUpdating, setProfileUpdating] = useState<'safe' | 'balanced' | 'manual' | null>(null);
+  const [isDisablingGuard, setIsDisablingGuard] = useState(false);
+
+  const handleDisableGuard = async () => {
+    if (window.confirm("Are you sure you want to disable Miiso Protection Guard? This will revoke on-chain session authority and relayer protections.")) {
+      setIsDisablingGuard(true);
+      try {
+        await disableGuard();
+      } catch (err) {
+        console.error("Failed to disable guard:", err);
+      } finally {
+        setIsDisablingGuard(false);
+      }
+    }
+  };
 
   const handleUpdateProfile = async (profile: 'safe' | 'balanced' | 'manual') => {
     setIsUpdating(true);
@@ -220,9 +235,18 @@ export function Settings() {
                  <button className="flex-1 bg-white/5 hover:bg-white/10 text-[#E1E0CC] px-4 py-3 rounded-xl text-sm transition-colors font-medium">
                    Renew EIP-7715 Session
                  </button>
-                 <button className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-3 rounded-xl text-sm transition-colors font-medium flex items-center justify-center gap-2">
-                   <AlertOctagon className="w-4 h-4" />
+                 <button className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-3 rounded-xl text-sm transition-colors font-medium flex items-center justify-center gap-2" onClick={handleDisableGuard} disabled={isDisablingGuard}>
+                   {isDisablingGuard ? (
+                     <>
+                       <div className="w-4 h-4 border-2 border-t-transparent border-red-500 rounded-full animate-spin" />
+                       Disabling...
+                     </>
+                   ) : (
+                     <>
+                       <AlertOctagon className="w-4 h-4" />
                    Disable Guard
+                     </>
+                   )}
                  </button>
               </div>
             </div>
