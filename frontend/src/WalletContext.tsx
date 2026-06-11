@@ -1,46 +1,18 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
+import { useStore } from './store/index';
+import { useSSE } from './hooks/useSSE';
+import { useDashboard } from './hooks/useDashboard';
+import { usePermission } from './hooks/usePermission';
+import { postRevoke, postBatchRevoke, postVeto, updateProfile } from './lib/api';
+import type { ApprovalInfo, ProtectionEvent, DashboardStats, SecurityProfile } from './types/index';
 
-export interface ApprovalInfo {
-  token: string;
-  spender: string;
-  amount: string;
-  rawAllowance: string;
-  date: string;
-  riskLevel: "high" | "medium" | "low" | "none";
-}
-
-export interface ProtectionEvent {
-  id: string;
-  userAddress: string;
-  tokenAddress: string;
-  spenderAddress: string;
-  exposedValue: string;
-  actionType: "revocation" | "veto";
-  relayTxHash: string;
-  relayStatus: "pending" | "confirmed" | "failed";
-  severity: "high" | "medium" | "low";
-  vetoCancelled: boolean;
-  stagedUntil: string | null;
-  createdAt: string;
-  explainer?: string | null;
-  confidence?: string | null;
-  staticFlags?: string[] | null;
-  staticRisk?: string | null;
-}
-
-export interface DashboardStats {
-  threatsDetected: number;
-  totalSaved: string;
-  budgetCap: string;
-  budgetSpent: string;
-  budgetRemaining: string;
-}
+export type { ApprovalInfo, ProtectionEvent, DashboardStats };
 
 interface WalletContextType {
   walletAddress: string | null;
   isConnected: boolean;
   isLoading: boolean;
-  securityProfile: 'safe' | 'balanced' | 'manual';
+  securityProfile: SecurityProfile;
   stats: DashboardStats | null;
   approvals: ApprovalInfo[];
   history: ProtectionEvent[];
@@ -50,51 +22,43 @@ interface WalletContextType {
   revokeApproval: (tokenAddress: string, spenderAddress: string, rawAllowance: string) => Promise<boolean>;
   batchRevokeApprovals: (approvalsToRevoke: { tokenAddress: string; spenderAddress: string; rawAllowance: string }[]) => Promise<boolean>;
   vetoAction: (eventId: string) => Promise<boolean>;
-  updateSecurityProfile: (profile: 'safe' | 'balanced' | 'manual') => Promise<boolean>;
+  updateSecurityProfile: (profile: SecurityProfile) => Promise<boolean>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
-const BACKEND_URL = "http://localhost:3001";
-
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [walletAddress, setWalletAddress] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('miiso_wallet_address');
-    }
-    return null;
-  });
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [approvals, setApprovals] = useState<ApprovalInfo[]>([]);
-  const [history, setHistory] = useState<ProtectionEvent[]>([]);
-  const [securityProfile, setSecurityProfile] = useState<'safe' | 'balanced' | 'manual'>('balanced');
-  const [isLoading, setIsLoading] = useState(false);
+  // Sync state from Zustand store
+  const walletAddress = useStore((s) => s.userAddress);
+  const isConnected = useStore((s) => s.isConnected);
+  const isLoading = useStore((s) => s.isLoading);
+  const securityProfile = useStore((s) => s.securityProfile);
+  const stats = useStore((s) => s.stats);
+  const approvals = useStore((s) => s.approvals);
+  const history = useStore((s) => s.history);
 
-  // MetaMask event listeners
+  const setUserAddress = useStore((s) => s.setUserAddress);
+  const setIsLoading = useStore((s) => s.setIsLoading);
+  const setSecurityProfile = useStore((s) => s.setSecurityProfile);
+  const resetStore = useStore((s) => s.reset);
+
+  const { fetchDashboardData } = useDashboard();
+  const { checkPermission } = usePermission();
+
+  // Listen to SSE events (auto-handles state mutations)
+  useSSE(walletAddress);
+
+  // Sync dashboard data on wallet address load
   useEffect(() => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
-      const provider = (window as any).ethereum;
-      
-      const handleAccountsChanged = (accounts: string[]) => {
-        if (accounts && accounts[0]) {
-          setWalletAddress(accounts[0]);
-          localStorage.setItem('miiso_wallet_address', accounts[0]);
-        } else {
-          setWalletAddress(null);
-          localStorage.removeItem('miiso_wallet_address');
-          setStats(null);
-          setApprovals([]);
-          setHistory([]);
-          setSecurityProfile('balanced');
+    if (walletAddress) {
+      fetchDashboardData();
+      checkPermission().then((perm) => {
+        if (perm && perm.securityProfile) {
+          setSecurityProfile(perm.securityProfile as SecurityProfile);
         }
-      };
-
-      provider.on('accountsChanged', handleAccountsChanged);
-      return () => {
-        provider.removeListener('accountsChanged', handleAccountsChanged);
-      };
+      });
     }
-  }, []);
+  }, [walletAddress, fetchDashboardData, checkPermission, setSecurityProfile]);
 
   // Connects wallet - supports window.ethereum if available, falls back to demo account
   const connectWallet = async () => {
@@ -108,122 +72,46 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           address = accounts[0];
         }
       }
-      setWalletAddress(address);
-      localStorage.setItem('miiso_wallet_address', address);
+      setUserAddress(address);
     } catch (error) {
       console.error("Wallet connection failed:", error);
       // Fallback anyway to ensure seamless demo experience
       const address = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
-      setWalletAddress(address);
-      localStorage.setItem('miiso_wallet_address', address);
+      setUserAddress(address);
     } finally {
       setIsLoading(false);
     }
   };
 
   const disconnectWallet = () => {
-    setWalletAddress(null);
-    setStats(null);
-    setApprovals([]);
-    setHistory([]);
-    setSecurityProfile('balanced');
-    localStorage.removeItem('miiso_wallet_address');
+    resetStore();
   };
 
   const refreshAllData = async () => {
     if (!walletAddress) return;
     setIsLoading(true);
     try {
-      // 1. Fetch Stats
-      const statsRes = await fetch(`${BACKEND_URL}/api/dashboard/${walletAddress}`);
-      const statsJson = await statsRes.json();
-      if (statsJson.success) {
-        setStats(statsJson.stats);
+      await fetchDashboardData();
+      const perm = await checkPermission();
+      if (perm && perm.securityProfile) {
+        setSecurityProfile(perm.securityProfile as SecurityProfile);
       }
-
-      // 2. Fetch Approvals
-      const approvalsRes = await fetch(`${BACKEND_URL}/api/approvals/${walletAddress}`);
-      const approvalsJson = await approvalsRes.json();
-      if (approvalsJson.success) {
-        setApprovals(approvalsJson.approvals);
-      }
-
-      // 3. Fetch History
-      const historyRes = await fetch(`${BACKEND_URL}/api/history/${walletAddress}`);
-      const historyJson = await historyRes.json();
-      if (historyJson.success) {
-        setHistory(historyJson.events);
-      }
-
-      // 4. Fetch Security Profile
-      try {
-        const permRes = await fetch(`${BACKEND_URL}/api/permissions/${walletAddress}`);
-        const permJson = await permRes.json();
-        if (permJson.success && permJson.permission) {
-          setSecurityProfile(permJson.permission.securityProfile);
-        }
-      } catch (permErr) {
-        console.warn("Could not retrieve security profile settings:", permErr);
-      }
-    } catch (error) {
-      console.error("Failed to fetch data from backend:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Fetch data on walletAddress changes
-  useEffect(() => {
-    if (walletAddress) {
-      refreshAllData();
-      
-      // Start EventSource subscription for real-time SSE threat/revocation alerts!
-      const eventSource = new EventSource(`${BACKEND_URL}/api/events/${walletAddress}`);
-      
-      eventSource.addEventListener("THREAT_DETECTED", (e: any) => {
-        const data = JSON.parse(e.data);
-        console.log("🚨 Real-time event: THREAT_DETECTED", data);
-        refreshAllData();
-      });
-
-      eventSource.addEventListener("REVOCATION_CONFIRMED", (e: any) => {
-        const data = JSON.parse(e.data);
-        console.log("✅ Real-time event: REVOCATION_CONFIRMED", data);
-        refreshAllData();
-      });
-
-      eventSource.addEventListener("VETO_CONFIRMED", (e: any) => {
-        const data = JSON.parse(e.data);
-        console.log("🚫 Real-time event: VETO_CONFIRMED", data);
-        refreshAllData();
-      });
-
-      eventSource.onerror = (err) => {
-        console.error("SSE connection error:", err);
-      };
-
-      return () => {
-        eventSource.close();
-      };
-    }
-  }, [walletAddress]);
-
   // Execute manual revocation via backend EIP-7710/7715 relayer queue
   const revokeApproval = async (tokenAddress: string, spenderAddress: string, rawAllowance: string): Promise<boolean> => {
     if (!walletAddress) return false;
     try {
-      const res = await fetch(`${BACKEND_URL}/api/revoke/manual`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userAddress: walletAddress,
-          tokenAddress,
-          spenderAddress,
-          exposedValue: rawAllowance
-        })
+      const res = await postRevoke({
+        userAddress: walletAddress,
+        tokenAddress,
+        spenderAddress,
+        rawAllowance
       });
-      const data = await res.json();
-      if (data.success) {
+      if (res.success) {
         await refreshAllData();
         return true;
       }
@@ -237,11 +125,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Cancel veto
   const vetoAction = async (eventId: string): Promise<boolean> => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/veto/${eventId}`, {
-        method: "POST"
-      });
-      const data = await res.json();
-      if (data.success) {
+      const res = await postVeto(eventId);
+      if (res.cancelled) {
         await refreshAllData();
         return true;
       }
@@ -255,20 +140,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const batchRevokeApprovals = async (approvalsToRevoke: { tokenAddress: string; spenderAddress: string; rawAllowance: string }[]): Promise<boolean> => {
     if (!walletAddress) return false;
     try {
-      const res = await fetch(`${BACKEND_URL}/api/revoke/batch`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userAddress: walletAddress,
-          approvals: approvalsToRevoke.map(a => ({
-            tokenAddress: a.tokenAddress,
-            spenderAddress: a.spenderAddress,
-            exposedValue: a.rawAllowance
-          }))
-        })
+      const res = await postBatchRevoke({
+        userAddress: walletAddress,
+        approvals: approvalsToRevoke
       });
-      const data = await res.json();
-      if (data.success) {
+      if (res.success) {
         await refreshAllData();
         return true;
       }
@@ -279,19 +155,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateSecurityProfile = async (profile: 'safe' | 'balanced' | 'manual'): Promise<boolean> => {
+  const updateSecurityProfile = async (profile: SecurityProfile): Promise<boolean> => {
     if (!walletAddress) return false;
     try {
-      const res = await fetch(`${BACKEND_URL}/api/permissions/profile`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userAddress: walletAddress,
-          securityProfile: profile
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
+      const res = await updateProfile(walletAddress, profile);
+      if (res.success) {
         setSecurityProfile(profile);
         return true;
       }
@@ -305,7 +173,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   return (
     <WalletContext.Provider value={{
       walletAddress,
-      isConnected: !!walletAddress,
+      isConnected,
       isLoading,
       securityProfile,
       stats,

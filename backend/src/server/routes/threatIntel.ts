@@ -18,6 +18,26 @@ export async function threatIntelRoutes(fastify: FastifyInstance, options: Fasti
     async (request, reply) => {
       const { limit = 20 } = request.query as { limit?: number };
 
+      // x402 SIWE gating — in production, verify SIWE bearer token
+      // In DEMO_MODE, bypass authentication
+      if (process.env.DEMO_MODE !== "true") {
+        const authHeader = request.headers["authorization"];
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+          return reply.status(402).send({
+            error: "PaymentRequired",
+            message: "x402 SIWE authentication required for B2B threat intel access",
+            paymentRequired: {
+              network: "Base",
+              chainId: 8453,
+              tokenAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+              minimumTopUp: "1.000000"
+            }
+          });
+        }
+        // In a full implementation, validate the SIWE bearer token here
+        // For hackathon: any bearer token passes (just checks presence)
+      }
+
       try {
         const scans = await getRecentScans(limit);
         
