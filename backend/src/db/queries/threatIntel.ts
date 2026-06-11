@@ -15,9 +15,10 @@ export async function insertThreatIntel(data: {
       embedding: JSON.stringify(data.embedding), // Serialize as JSON text
       createdAt: new Date(),
     })
+    .onConflictDoNothing()
     .returning();
     
-  return inserted;
+  return inserted || null;
 }
 
 /**

@@ -27,9 +27,10 @@ export async function insertScan(data: {
       explainer: data.explainer,
       createdAt: new Date(),
     })
+    .onConflictDoNothing()
     .returning();
     
-  return inserted;
+  return inserted || null;
 }
 
 export async function getScanByAddress(contractAddress: string) {
