@@ -242,7 +242,7 @@ export function Dashboard() {
         {/* Zone 2 - Live Threat Feed */}
         <div className="lg:col-span-1 bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex flex-col h-125">
           <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0B0B0C]">
-            <h2 className="text-[#E1E0CC] font-medium text-lg">Live Threat Feed</h2>
+            <h2 className="text-[#E1E0CC] font-medium text-lg">Live Network Scans</h2>
             <Activity className="w-5 h-5 text-[#19C978] animate-pulse" />
           </div>
           <div className="p-4 flex-1 overflow-y-auto space-y-3 font-mono text-xs">
@@ -274,9 +274,14 @@ export function Dashboard() {
                 return (
                   <div key={log.id} className={`bg-[#0B0B0C] p-3 rounded-lg border flex flex-col gap-2 ${isClean ? 'border-[#19C978]/20' : 'border-white/5'}`}>
                     <div className="flex justify-between items-start">
-                      <span className="text-gray-400 hover:text-white cursor-pointer transition-colors underline decoration-white/20">
+                      <a 
+                        href={`https://base-sepolia.blockscout.com/address/${log.spenderAddress}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-gray-400 hover:text-[#19C978] cursor-pointer transition-colors underline decoration-white/20"
+                      >
                         {formatAddr(log.spenderAddress)}
-                      </span>
+                      </a>
                       <span className="text-gray-500">{new Date(log.createdAt).toLocaleTimeString()}</span>
                     </div>
                     

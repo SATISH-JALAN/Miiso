@@ -42,15 +42,10 @@ export async function startBlockWatcher() {
     
     // If online, start the live block watcher
     await startRealBlockWatcher();
-  } catch (rpcErr) {
-    if (process.env.DEMO_MODE === "true") {
-      logger.info("ℹ️ BlockWatcher: Local Anvil RPC offline. Initializing Mock Threat Simulation Loop...");
-      startMockBlockWatcher();
-    } else {
-      logger.warn("⚠️ BlockWatcher: Blockchain RPC offline. Live threat scanning suspended. Retrying in 15 seconds...");
-      isScanningActive = false;
-      setTimeout(() => startBlockWatcher(), 15000);
-    }
+  } catch (rpcErr: any) {
+    logger.warn(`⚠️ BlockWatcher: Blockchain RPC offline. Error: ${rpcErr?.message || rpcErr}. Live threat scanning suspended. Retrying in 15 seconds...`);
+    isScanningActive = false;
+    setTimeout(() => startBlockWatcher(), 15000);
   }
 }
 
@@ -99,125 +94,7 @@ async function startRealBlockWatcher() {
   }
 }
 
-/**
- * Simulates block detection and threat triggers when offline in DEMO_MODE.
- */
-function startMockBlockWatcher() {
-  mockWatcherInterval = setInterval(async () => {
-    try {
-      simulatedBlockHeight += 1n;
-      logger.info(`📦 BlockWatcher (SIMULATED): New block received: #${simulatedBlockHeight}`);
 
-      // 30% chance to simulate a malicious contract deployment
-      if (Math.random() < 0.3) {
-        // Generate a random mock spender contract address
-        const randomHex = Array(20)
-          .fill(0)
-          .map(() => Math.floor(Math.random() * 256).toString(16).padStart(2, "0"))
-          .join("");
-        const mockContractAddress = getAddress(`0x${randomHex}`);
-        
-        logger.warn(`🚨 BlockWatcher (SIMULATED): Detected Direct deployment contract at address: ${mockContractAddress}`);
-
-        // Find active users who have granted delegation permissions to target
-        const activePermissions = await getAllActivePermissions();
-        const targetUsers = activePermissions.length > 0 
-          ? activePermissions.map(p => p.userAddress)
-          : ["0x976ea74026e726554db657fa54763abd0c3a0aa9"]; // fallback standard agent address
-
-        const tokenAddress = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"; // Mock USDC on Base
-
-        // Register mock approval for these users
-        for (const user of targetUsers) {
-          await upsertApproval({
-            userAddress: user,
-            tokenAddress,
-            spenderAddress: mockContractAddress,
-            allowance: "50000000000", // $50,000 allowance
-            lastScannedBlock: simulatedBlockHeight
-          });
-        }
-
-        // Randomly select threat type (Tier 1 immediate, Tier 2 staged veto, or Tier 3 info)
-        const rand = Math.random();
-        let staticRisk: "high" | "medium" | "low" = "high";
-        let staticFlags = ["selfdestruct", "delegatecall"];
-        let veniceConfidence = 0.79;
-        let combinedConfidence = 0.89;
-        let explainer = "Simulated honeypot contract. Dangerous delegatecall and selfdestruct functions detected.";
-        let tier: 1 | 2 | 3 = 1;
-
-        if (rand < 0.4) {
-          // Tier 2: Staged veto countdown (0.70 <= confidence < 0.85)
-          staticRisk = "high";
-          staticFlags = ["selfdestruct", "delegatecall"];
-          veniceConfidence = 0.65; // 0.65 + 0.10 = 0.75 combined
-          combinedConfidence = 0.75;
-          explainer = "Simulated vulnerable contract. Medium confidence pattern match, staged for 60-second user veto.";
-          tier = 2;
-        } else if (rand < 0.8) {
-          // Tier 1: Immediate auto-revocation (confidence >= 0.85)
-          staticRisk = "high";
-          staticFlags = ["selfdestruct", "delegatecall"];
-          veniceConfidence = 0.79; // 0.79 + 0.10 = 0.89 combined
-          combinedConfidence = 0.89;
-          explainer = "Simulated critical honeypot contract. Immediate auto-revocation triggered.";
-          tier = 1;
-        } else {
-          // Tier 3: Informational (0.50 <= confidence < 0.70)
-          staticRisk = "medium";
-          staticFlags = ["reentrancy"];
-          veniceConfidence = 0.50; // 0.50 + 0.05 = 0.55 combined
-          combinedConfidence = 0.55;
-          explainer = "Simulated low-risk warning. Potential reentrancy pattern detected, monitoring only.";
-          tier = 3;
-        }
-
-        // Simulating honeypot/approval drainer contract bytecode
-        const mockBytecode = "0x608060405234801561001057600080fd5b50600436106100415760003560e01c8063095ea7b31461004657806323b872dd14610060578063ff11223314610080575b600080fd5b50604051ff5b34801561006c57600080fd5b5061007423b872dd565b00";
-        const bytecodeHash = sha256(mockBytecode as `0x${string}`);
-
-        // Save scan result to Database
-        await insertScan({
-          contractAddress: mockContractAddress,
-          bytecodeHash,
-          blockNumber: simulatedBlockHeight,
-          vulnerable: tier !== 3,
-          confidence: combinedConfidence.toString(),
-          verdict: JSON.stringify({
-            combinedConfidence,
-            shouldExecute: tier === 1 || tier === 2,
-            tier,
-            totalCostUsdc: 0.00038
-          }),
-          staticRisk,
-          staticFlags,
-          explainer
-        });
-
-        // Save mock threat intelligence vector embeddings
-        const mockVector = Array(1536).fill(0).map(() => Math.random() - 0.5);
-        await insertThreatIntel({
-          bytecodeHash,
-          bytecode: mockBytecode,
-          embedding: mockVector
-        });
-
-        // Trigger threat confidence router to stage the veto event!
-        await routeThreatConfidence({
-          contractAddress: mockContractAddress,
-          bytecode: mockBytecode,
-          staticRisk,
-          staticFlags,
-          veniceVulnerable: tier !== 3,
-          veniceConfidence
-        });
-      }
-    } catch (err) {
-      logger.error("❌ BlockWatcher (SIMULATED): Error during mock block iteration:", err);
-    }
-  }, 25000); // scan block every 25 seconds
-}
 
 /**
  * Processes a single block: scans for direct and factory deployments.
@@ -400,10 +277,6 @@ export function stopBlockWatcher() {
   if (unwatchBlockLoop) {
     unwatchBlockLoop();
     unwatchBlockLoop = null;
-  }
-  if (mockWatcherInterval) {
-    clearInterval(mockWatcherInterval);
-    mockWatcherInterval = null;
   }
   isScanningActive = false;
   logger.info("🛑 BlockWatcher: Scanner daemon stopped.");

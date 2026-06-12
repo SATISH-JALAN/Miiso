@@ -120,6 +120,24 @@ export function seedWallet(body: {
   });
 }
 
+// ── Agents Analysis ────────────────────────────────────────────────
+export function postAnalyzeContract(contractAddress: string) {
+  return request<{
+    success: boolean;
+    data: {
+      contractAddress: string;
+      combinedConfidence: number;
+      staticRisks: string[];
+      veniceConfidenceVerdict: string;
+      score: number;
+      totalCostUsdc: number;
+    }
+  }>("/api/analyze", {
+    method: "POST",
+    body: JSON.stringify({ contractAddress }),
+  });
+}
+
 // ── SSE URL ──────────────────────────────────────────────────────
 export function getSSEUrl(address: string) {
   return `${BACKEND_URL}/api/events/${address}`;

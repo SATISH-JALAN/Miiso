@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Bot, Database, ShieldAlert, CheckSquare, Loader2, Play, DollarSign, FileText, ChevronRight, Activity, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Search, Bot, Database, ShieldAlert, CheckSquare, Loader2, Play, DollarSign, FileText, ChevronRight, Activity, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useWallet } from './WalletContext';
+import { postAnalyzeContract } from './lib/api';
 
 interface AgentStep {
   agent: 'Research' | 'Data' | 'Analysis' | 'FactCheck' | 'Relayer';
@@ -18,6 +19,14 @@ export function Research() {
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'signing' | 'paid'>('idle');
   const [cost, setCost] = useState('0.0002');
   const [activeTab, setActiveTab] = useState<'interactive' | 'logs'>('interactive');
+  const [addressError, setAddressError] = useState<string | null>(null);
+  const [reportData, setReportData] = useState<{
+    combinedConfidence: number;
+    staticRisks: string[];
+    veniceConfidenceVerdict: string;
+    score: number;
+    totalCostUsdc: number;
+  } | null>(null);
 
   const [steps, setSteps] = useState<AgentStep[]>([
     { agent: 'Relayer', message: 'EIP-7715 session authorization request: Gas allowance confirmation', status: 'pending', timestamp: '10:09:01' },
@@ -33,13 +42,16 @@ export function Research() {
   ]);
 
   const handleStartAnalysis = async () => {
+    setAddressError(null);
+    setReportData(null);
+
     if (!isConnected) {
-      alert("Please connect your wallet first.");
+      setAddressError("Please connect your wallet first.");
       return;
     }
     
     if (!targetAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
-      alert("Please enter a valid 42-character Ethereum address.");
+      setAddressError("Please enter a valid 42-character Ethereum address.");
       return;
     }
 
@@ -68,6 +80,21 @@ export function Research() {
     }
 
     setPaymentStatus('paid');
+
+    try {
+      const result = await postAnalyzeContract(targetAddress);
+      if (result.success && result.data) {
+        setReportData(result.data);
+      } else {
+        setAddressError("Analysis failed. Could not fetch bytecode.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setAddressError(err.message || "Failed to analyze contract.");
+      setIsRunning(false);
+      setPaymentStatus('idle');
+      setCurrentStepIdx(-1);
+    }
   };
 
   useEffect(() => {
@@ -153,6 +180,14 @@ export function Research() {
       {/* Main Input Form */}
       <div className="bg-[#101010] p-6 rounded-3xl border border-white/5 mb-8 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#19C978]/5 rounded-full blur-3xl -z-10" />
+        
+        {addressError && (
+          <div className="mb-4 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500" />
+            <span className="text-red-400 text-sm font-semibold">{addressError}</span>
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row gap-4 items-center">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
@@ -160,7 +195,10 @@ export function Research() {
               type="text"
               placeholder="Enter Smart Contract Address (0x...)"
               value={targetAddress}
-              onChange={(e) => setTargetAddress(e.target.value)}
+              onChange={(e) => {
+                setTargetAddress(e.target.value);
+                setAddressError(null);
+              }}
               disabled={isRunning}
               className="w-full bg-black border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-[#E1E0CC] placeholder-gray-600 focus:outline-none focus:border-[#19C978]/45 transition-colors text-sm"
             />
@@ -332,17 +370,23 @@ export function Research() {
                   className="flex-1 flex flex-col"
                 >
                   {/* Danger score indicator */}
-                  <div className="bg-[#19C978]/5 border border-[#19C978]/20 p-5 rounded-2xl mb-6">
+                  <div className={`border p-5 rounded-2xl mb-6 ${reportData?.score && reportData.score < 50 ? 'bg-red-500/5 border-red-500/20' : 'bg-[#19C978]/5 border-[#19C978]/20'}`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-xs text-gray-400 font-semibold uppercase">Security Score</span>
-                      <span className="text-xs text-[#19C978] font-bold bg-[#19C978]/10 px-2 py-0.5 rounded-full">Passed</span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${reportData?.score && reportData.score < 50 ? 'text-red-500 bg-red-500/10' : 'text-[#19C978] bg-[#19C978]/10'}`}>
+                        {reportData?.score && reportData.score < 50 ? 'Vulnerable' : 'Passed'}
+                      </span>
                     </div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-extrabold text-[#19C978]">92</span>
+                      <span className={`text-4xl font-extrabold ${reportData?.score && reportData.score < 50 ? 'text-red-500' : 'text-[#19C978]'}`}>
+                        {reportData?.score ?? 92}
+                      </span>
                       <span className="text-lg text-gray-500 font-semibold">/100</span>
                     </div>
                     <p className="text-xs text-gray-400 mt-3 leading-relaxed">
-                      Safe to approve. Only low static risks were found. No delegatecall or whitelist anomalies observed.
+                      {reportData?.score && reportData.score < 50 
+                        ? 'High-risk vulnerabilities found. Do not interact with this contract. It contains dangerous patterns.'
+                        : 'Safe to approve. Only low static risks were found. No delegatecall or whitelist anomalies observed.'}
                     </p>
                   </div>
 
@@ -354,19 +398,25 @@ export function Research() {
                     </div>
                     <div className="border-b border-white/5 pb-3">
                       <div className="text-gray-500 mb-1">Venice Confidence Verdict</div>
-                      <div className="text-gray-300 font-medium">94.5% Safe</div>
+                      <div className="text-gray-300 font-medium">{reportData?.veniceConfidenceVerdict ?? '94.5% Safe'}</div>
                     </div>
                     <div className="border-b border-white/5 pb-3">
                       <div className="text-gray-500 mb-1">Static Risks Found</div>
-                      <div className="flex gap-2 mt-1">
-                        <span className="bg-white/5 px-2 py-1 rounded text-[10px]">None</span>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {reportData?.staticRisks?.length ? (
+                          reportData.staticRisks.map((risk, i) => (
+                            <span key={i} className="bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-1 rounded text-[10px]">{risk}</span>
+                          ))
+                        ) : (
+                          <span className="bg-white/5 px-2 py-1 rounded text-[10px]">None</span>
+                        )}
                       </div>
                     </div>
                     <div className="pb-3">
                       <div className="text-gray-500 mb-1">X402 Relayer Log</div>
                       <div className="text-[#19C978] flex items-center gap-1 font-semibold">
                         <ShieldCheck className="w-3.5 h-3.5" />
-                        0.0002 WETH transaction confirmed
+                        {cost} WETH transaction confirmed
                       </div>
                     </div>
                   </div>

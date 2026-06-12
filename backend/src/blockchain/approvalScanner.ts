@@ -7,13 +7,12 @@ import { db } from "../db/client.js";
 import { approvalCache, whitelist } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 
-const CHUNK_SIZE = 2000n;
-const MAX_HISTORY_BLOCKS = 3880000n; // Approx 90 days on Base (2s block time)
 const DUMMY_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 export interface ApprovalInfo {
   token: string;
   spender: string;
+  spenderName?: string | null;
   amount: string; // formatted decimal string or raw wei string
   rawAllowance: string;
   date: string;
@@ -24,6 +23,10 @@ export interface ApprovalInfo {
  * Scans on-chain log history for a user's token approvals, caching results in DB.
  */
 export async function scanUserApprovals(userAddress: string): Promise<ApprovalInfo[]> {
+  const isSepolia = process.env.HTTP_RPC_URL?.includes("sepolia") || process.env.ALCHEMY_WSS_URL?.includes("sepolia");
+  const CHUNK_SIZE = isSepolia ? 10n : 2000n;
+  const MAX_HISTORY_BLOCKS = isSepolia ? 100n : 3880000n;
+  
   const normalizedUser = getAddress(userAddress);
   
   try {
@@ -209,8 +212,13 @@ export async function scanUserApprovals(userAddress: string): Promise<ApprovalIn
           date: record.updatedAt.toISOString(),
           riskLevel
         });
-      } catch (err) {
-        console.error(`⚠️ Scanner: Failed on-chain allowance check:`, err);
+      } catch (err: any) {
+        if (err.name === 'ContractFunctionZeroDataError' || err.message?.includes('returned no data')) {
+          // Token contract doesn't exist on this network (e.g., switched from Mainnet to Sepolia)
+          // Treat allowance as 0
+          continue;
+        }
+        console.error(`⚠️ Scanner: Failed on-chain allowance check for ${tokenAddress}: ${err.shortMessage || err.message}`);
         // Fall back to database cached values if RPC request fails
         let riskLevel: "high" | "medium" | "low" | "none" = "low";
         const scan = await getScanByAddress(spenderAddress);

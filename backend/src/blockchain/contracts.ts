@@ -2,7 +2,12 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-export const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as const;
+const isSepolia = process.env.HTTP_RPC_URL?.includes("sepolia") || process.env.ALCHEMY_WSS_URL?.includes("sepolia");
+
+export const USDC_ADDRESS = (process.env.USDC_ADDRESS || (isSepolia 
+  ? "0x036CbD53842c5426634e7929541eC2318f3dCF7e" 
+  : "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913")) as `0x${string}`;
+
 export const VENICE_VAULT = "0xbaa13a4b5df53a1cf6038015f9e7c58afd2aa22e" as const;
 
 export const APPROVAL_REVOCATION_ENFORCER = (process.env.APPROVAL_REVOCATION_ENFORCER || 

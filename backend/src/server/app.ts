@@ -15,6 +15,7 @@ import { webhookRoutes } from "./routes/webhook.js";
 import { threatIntelRoutes } from "./routes/threatIntel.js";
 import { seedWalletRoutes } from "./routes/seedWallet.js";
 import { revokeBatchRoutes } from "./routes/batch.js";
+import { analyzeRoutes } from "./routes/analyze.js";
 
 export function buildApp() {
   const app = Fastify({
@@ -79,6 +80,7 @@ export function buildApp() {
   app.register(webhookRoutes, { prefix: "/api" });
   app.register(threatIntelRoutes, { prefix: "/api" });
   app.register(seedWalletRoutes, { prefix: "/api" });
+  app.register(analyzeRoutes, { prefix: "/api" });
 
   return app;
 }

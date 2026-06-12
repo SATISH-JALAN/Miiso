@@ -88,9 +88,13 @@ async function fetchContractExposure(
     "event Transfer(address indexed from, address indexed to, uint256 value)"
   );
 
-  const fromBlock1 = currentBlock > 1000n ? currentBlock - 1000n : 0n;
-  const toBlock1 = currentBlock > 501n ? currentBlock - 501n : 0n;
-  const fromBlock2 = currentBlock > 500n ? currentBlock - 500n : 0n;
+  const isSepolia = process.env.HTTP_RPC_URL?.includes("sepolia") || process.env.ALCHEMY_WSS_URL?.includes("sepolia");
+  const scanDepth = isSepolia ? 10n : 1000n;
+  const halfDepth = scanDepth / 2n;
+
+  const fromBlock1 = currentBlock > scanDepth ? currentBlock - scanDepth : 0n;
+  const toBlock1 = currentBlock > halfDepth + 1n ? currentBlock - halfDepth - 1n : 0n;
+  const fromBlock2 = currentBlock > halfDepth ? currentBlock - halfDepth : 0n;
 
   const [chunk1, chunk2] = await Promise.all([
     publicClient.getLogs({
