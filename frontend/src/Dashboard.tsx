@@ -22,6 +22,8 @@ export function Dashboard() {
     isLoading 
   } = useWallet();
 
+  const permissionContext = useStore((s) => s.permissionContext);
+  const events = useStore((s) => s.events);
   const [revokingStates, setRevokingStates] = useState<Record<string, boolean>>({});
   const [vetoingStates, setVetoingStates] = useState<Record<string, boolean>>({});
   const [executingStates, setExecutingStates] = useState<Record<string, boolean>>({});
@@ -105,7 +107,7 @@ export function Dashboard() {
   const formatAddr = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
 
   // Active Pending Actions (Tier 2 Veto Cooldown events)
-  const pendingActions = history.filter(
+  const pendingActions = events.filter(
     (log: ProtectionEvent) => log.actionType === "veto" && !log.vetoCancelled && log.stagedUntil && new Date(log.stagedUntil) > new Date()
   );
 
@@ -166,7 +168,6 @@ export function Dashboard() {
         </div>
         <div className="flex items-center gap-6 text-sm">
           {(() => {
-            const { permissionContext } = useStore.getState();
             let daysLeft = "N/A";
             try {
               if (permissionContext) {
@@ -245,10 +246,10 @@ export function Dashboard() {
             <Activity className="w-5 h-5 text-[#19C978] animate-pulse" />
           </div>
           <div className="p-4 flex-1 overflow-y-auto space-y-3 font-mono text-xs">
-            {history.length === 0 ? (
+            {events.length === 0 ? (
               <div className="text-gray-500 text-center py-8">No security logs recorded. System monitoring.</div>
             ) : (
-              history.map((log: ProtectionEvent) => {
+              events.map((log: ProtectionEvent) => {
                 const isRevocation = log.actionType === "revocation";
                 const isClean = log.actionType === "clean";
                 const isVetoed = log.vetoCancelled;
@@ -313,10 +314,10 @@ export function Dashboard() {
         </div>
 
         <div className="lg:col-span-2 space-y-8">
-          {/* Zone 3 - Token Approvals */}
+          {/* Zone 3 - Protected Assets */}
           <div className="bg-[#101010] rounded-2xl border border-white/5 overflow-hidden">
             <div className="p-6 border-b border-white/5 bg-[#0B0B0C] flex justify-between items-center">
-              <h2 className="text-[#E1E0CC] font-medium text-lg">Active Token Approvals</h2>
+              <h2 className="text-[#E1E0CC] font-medium text-lg">Protected Assets</h2>
               {approvals.length > 0 && (
                 <button
                   onClick={handleBatchRevoke}
@@ -358,7 +359,19 @@ export function Dashboard() {
                       return (
                         <tr key={i} className="border-b border-white/5 hover:bg-white/2 transition-colors h-16">
                           <td className="px-6 font-medium text-[#E1E0CC]">{symbol}</td>
-                          <td className="px-6 font-mono text-xs">{formatAddr(row.spender)}</td>
+                          <td className="px-6">
+                            <div className="flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-[#19C978] fill-[#19C978]/10 animate-pulse" />
+                              <div className="flex flex-col">
+                                <span className="font-semibold text-sm text-[#E1E0CC]">
+                                  {row.spenderName || "Unknown Protocol"}
+                                </span>
+                                <span className="font-mono text-[10px] text-gray-500">
+                                  {formatAddr(row.spender)}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
                           <td className="px-6 font-mono text-xs">{row.amount}</td>
                           <td className={`px-6 capitalize font-semibold ${getRiskColor(row.riskLevel)}`}>{row.riskLevel}</td>
                           <td className="px-6">
@@ -445,6 +458,37 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Budget Tracker Section */}
+      <div className="mt-8 bg-[#101010] p-6 rounded-2xl border border-white/5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-[#E1E0CC] font-medium text-base mb-1">Monthly Gas Relayer Budget</h3>
+            <p className="text-xs text-gray-500 max-w-xl">
+              Shows how much of the monthly gas budget has been used this period. The Sentinel scans Base contracts at ~$0.00095 per scan (Venice inference). The budget is only consumed if an automated revocation/veto relay transaction fires.
+            </p>
+          </div>
+          <div className="flex items-baseline gap-2 font-mono">
+            <span className="text-[#19C978] text-2xl font-bold">${parseFloat(formatBudget(stats?.budgetSpent || "0")).toFixed(2)}</span>
+            <span className="text-gray-500 text-sm">/ ${parseFloat(formatBudget(stats?.budgetCap || "0")).toFixed(2)} USDC spent</span>
+          </div>
+        </div>
+        
+        {/* Progress Bar */}
+        {(() => {
+          const cap = parseFloat(formatBudget(stats?.budgetCap || "0"));
+          const spent = parseFloat(formatBudget(stats?.budgetSpent || "0"));
+          const percent = cap > 0 ? Math.min(100, (spent / cap) * 100) : 0;
+          return (
+            <div className="w-full bg-white/5 h-2.5 rounded-full overflow-hidden">
+              <div 
+                className="bg-[#19C978] h-full rounded-full transition-all duration-500" 
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+          );
+        })()}
       </div>
 
       {/* Venice AI Threat Explainer Modal */}

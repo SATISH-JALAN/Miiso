@@ -136,10 +136,19 @@ export async function webhookRoutes(
 
         // ── 5. Handle confirmed status ──────────────────────────────────
         if (status === "confirmed") {
-          // Deduct from budget: actual fee or relay fee
-          const feeToDeduct = actualFee
-            ? Math.ceil(actualFee * 1_000_000).toString()
-            : relayFee;
+          let feeToDeduct = "0";
+          if (actualFee) {
+            feeToDeduct = Math.ceil(actualFee * 1e18).toString();
+          } else if (relayFee && relayFee !== "0") {
+            const parsed = parseFloat(relayFee);
+            if (parsed > 0) {
+              if (parsed < 1.0) {
+                feeToDeduct = Math.ceil(parsed * 1e18).toString();
+              } else {
+                feeToDeduct = Math.ceil(parsed).toString();
+              }
+            }
+          }
 
           if (feeToDeduct && feeToDeduct !== "0") {
             await db

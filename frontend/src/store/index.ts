@@ -76,7 +76,7 @@ export const useStore = create<MiisoState>((set, get) => ({
   setPermission: (ctx) => set({ permissionContext: ctx }),
   setStats: (stats) => set({ stats }),
   setApprovals: (approvals) => set({ approvals }),
-  setHistory: (history) => set({ history }),
+  setHistory: (history) => set({ history, events: history.slice(0, 200) }),
   setSecurityProfile: (profile) => set({ securityProfile: profile }),
 
   // Append event (max 200)

@@ -54,7 +54,7 @@ export function usePermission() {
         permissionContext,
         delegationHash,
         sessionSignerAddress: AGENT_ADDRESS,
-        budgetCap: budgetCap.toString(),
+        budgetCap: (budgetCap * 1e18).toString(),
         expiry: Math.floor(Date.now() / 1000) + 2592000, // 30 days
       });
     }

@@ -3,6 +3,7 @@
 export interface ApprovalInfo {
   token: string;
   spender: string;
+  spenderName?: string;
   amount: string;
   rawAllowance: string;
   date: string;

@@ -4,7 +4,7 @@ import { upsertApproval, getCachedApprovals } from "../db/queries/approvalCache.
 import { getScanByAddress } from "../db/queries/scanLog.js";
 import { formatUnits, getAddress } from "viem";
 import { db } from "../db/client.js";
-import { approvalCache } from "../db/schema.js";
+import { approvalCache, whitelist } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 
 const CHUNK_SIZE = 2000n;
@@ -136,6 +136,15 @@ export async function scanUserApprovals(userAddress: string): Promise<ApprovalIn
 
     // 5. Fetch all cached approvals from database
     const cachedRecords = await getCachedApprovals(normalizedUser);
+    
+    // Fetch whitelist for spender names
+    const whitelistRecords = await db.select().from(whitelist);
+    const protocolNames = new Map(whitelistRecords.map(w => [w.address.toLowerCase(), w.protocolName]));
+    // Add demo fallbacks if missing
+    if (!protocolNames.has("0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640")) protocolNames.set("0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640", "Uniswap V3 Pool");
+    if (!protocolNames.has("0x9488a0b0b0000000000000000000000000000099")) protocolNames.set("0x9488a0b0b0000000000000000000000000000099", "YieldNest Exploit Target");
+    if (!protocolNames.has("0x794a61358d6845594f94dc1db02a252b5b4814ad")) protocolNames.set("0x794a61358d6845594f94dc1db02a252b5b4814ad", "Aave V3 Pool");
+    
     const activeApprovals: ApprovalInfo[] = [];
 
     // 6. Verify allowances on-chain & assign risk levels
@@ -194,6 +203,7 @@ export async function scanUserApprovals(userAddress: string): Promise<ApprovalIn
         activeApprovals.push({
           token: `${symbol} (${tokenAddress})`,
           spender: spenderAddress,
+          spenderName: protocolNames.get(spenderAddress.toLowerCase()),
           amount: parseFloat(formatUnits(currentAllowance, decimals)).toFixed(4),
           rawAllowance: currentAllowance.toString(),
           date: record.updatedAt.toISOString(),
@@ -211,6 +221,7 @@ export async function scanUserApprovals(userAddress: string): Promise<ApprovalIn
         activeApprovals.push({
           token: `TOKEN (${tokenAddress})`,
           spender: spenderAddress,
+          spenderName: protocolNames.get(spenderAddress.toLowerCase()),
           amount: record.allowance,
           rawAllowance: record.allowance,
           date: record.updatedAt.toISOString(),
@@ -235,6 +246,14 @@ export async function scanUserApprovals(userAddress: string): Promise<ApprovalIn
     
     // Fallback directly to DB cache (perfect for local testing without Anvil active)
     const cachedRecords = await getCachedApprovals(normalizedUser);
+    
+    // Fetch whitelist for spender names
+    const whitelistRecords = await db.select().from(whitelist);
+    const protocolNames = new Map(whitelistRecords.map(w => [w.address.toLowerCase(), w.protocolName]));
+    if (!protocolNames.has("0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640")) protocolNames.set("0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640", "Uniswap V3 Pool");
+    if (!protocolNames.has("0x9488a0b0b0000000000000000000000000000099")) protocolNames.set("0x9488a0b0b0000000000000000000000000000099", "YieldNest Exploit Target");
+    if (!protocolNames.has("0x794a61358d6845594f94dc1db02a252b5b4814ad")) protocolNames.set("0x794a61358d6845594f94dc1db02a252b5b4814ad", "Aave V3 Pool");
+
     const activeApprovals: ApprovalInfo[] = [];
 
     for (const record of cachedRecords) {
@@ -271,6 +290,7 @@ export async function scanUserApprovals(userAddress: string): Promise<ApprovalIn
       activeApprovals.push({
         token: `${symbol} (${tokenAddress})`,
         spender: spenderAddress,
+        spenderName: protocolNames.get(spenderAddress.toLowerCase()),
         amount: formattedAmount,
         rawAllowance: record.allowance,
         date: record.updatedAt.toISOString(),

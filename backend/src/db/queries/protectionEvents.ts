@@ -87,11 +87,11 @@ export async function cancelVeto(eventId: string) {
 export async function getDashboardStats(userAddress: string) {
   const normalizedUser = userAddress.toLowerCase();
   
-  // 1. Aggregated protection event stats
-  const [eventStats] = await db
+  // 1. Fetch all protection events to count and calculate total saved
+  const events = await db
     .select({
-      threatsCount: sql<number>`count(*)::int`,
-      totalSaved: sql<string>`coalesce(sum(${protectionEvents.exposedValue}), 0)::text`
+      tokenAddress: protectionEvents.tokenAddress,
+      exposedValue: protectionEvents.exposedValue
     })
     .from(protectionEvents)
     .where(
@@ -100,6 +100,17 @@ export async function getDashboardStats(userAddress: string) {
         sql`${protectionEvents.relayStatus} != 'failed'`
       )
     );
+
+  let totalSavedUsd = 0;
+  for (const event of events) {
+    const isUSDC = event.tokenAddress.toLowerCase() === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+    const rawVal = BigInt(event.exposedValue);
+    if (isUSDC) {
+      totalSavedUsd += Number(rawVal) / 1e6;
+    } else {
+      totalSavedUsd += (Number(rawVal) / 1e18) * 3000; // WETH conversion
+    }
+  }
 
   // 2. Budget information from permissions_registry
   const [permission] = await db
@@ -116,11 +127,11 @@ export async function getDashboardStats(userAddress: string) {
     )
     .limit(1);
 
-  // 3. Total active exposure = SUM of all current allowances in the approval cache.
-  //    This is the real "Assets Protected" value — what Miiso is actively guarding.
-  const [exposureStats] = await db
+  // 3. Total active exposure from approval cache
+  const cachedApprovals = await db
     .select({
-      totalActiveExposure: sql<string>`coalesce(sum(${approvalCache.allowance}), 0)::text`
+      tokenAddress: approvalCache.tokenAddress,
+      allowance: approvalCache.allowance
     })
     .from(approvalCache)
     .where(
@@ -130,11 +141,21 @@ export async function getDashboardStats(userAddress: string) {
       )
     );
 
+  let totalActiveExposureUsd = 0;
+  for (const app of cachedApprovals) {
+    const isUSDC = app.tokenAddress.toLowerCase() === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+    const rawVal = BigInt(app.allowance);
+    if (isUSDC) {
+      totalActiveExposureUsd += Number(rawVal) / 1e6;
+    } else {
+      totalActiveExposureUsd += (Number(rawVal) / 1e18) * 3000;
+    }
+  }
+
   return {
-    threatsDetected: eventStats?.threatsCount || 0,
-    totalSaved: eventStats?.totalSaved || "0",
-    // Total value of active token approvals currently under Miiso's guard
-    totalActiveExposure: exposureStats?.totalActiveExposure || "0",
+    threatsDetected: events.length,
+    totalSaved: `$${totalSavedUsd.toFixed(2)}`,
+    totalActiveExposure: `$${totalActiveExposureUsd.toFixed(2)}`,
     budgetCap: permission?.budgetCap || "0",
     budgetSpent: permission?.budgetSpent || "0",
     budgetRemaining: (
