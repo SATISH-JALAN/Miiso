@@ -1,0 +1,23 @@
+{
+  "name": "miiso",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Miiso - Autonomous on-chain DeFi security agent",
+  "scripts": {
+    "dev:frontend": "pnpm --filter react-example dev",
+    "dev:backend": "pnpm --filter miiso-backend dev",
+    "dev": "pnpm run dev:frontend & pnpm run dev:backend",
+    "build:frontend": "pnpm --filter react-example build",
+    "build:backend": "pnpm --filter miiso-backend build"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@google/genai",
+      "bufferutil",
+      "esbuild",
+      "keccak",
+      "protobufjs",
+      "utf-8-validate"
+    ]
+  }
+}

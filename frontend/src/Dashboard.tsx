@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useWallet, ProtectionEvent, ApprovalInfo } from './WalletContext';
 import { useState } from 'react';
 import { VetoTimer } from './components/dashboard/VetoTimer';
+import { TxLink } from './components/shared/TxLink';
+
 
 export function Dashboard() {
   const { 
@@ -171,7 +173,8 @@ export function Dashboard() {
       {/* Zone 1 - Overview Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Assets Protected", value: "$45,000" },
+          { label: "Assets Protected", value: formatValueSaved(stats?.totalActiveExposure || "0") },
+
           { label: "Active Approvals", value: approvals.length.toString() },
           { label: "Threats Detected", value: (stats?.threatsDetected || 0).toString() },
           { label: "Value Saved", value: formatValueSaved(stats?.totalSaved || "0") }
@@ -330,7 +333,9 @@ export function Dashboard() {
                       <th className="px-6 font-normal">Date/Time</th>
                       <th className="px-6 font-normal">Threat/Action</th>
                       <th className="px-6 font-normal">Value At Risk</th>
+                      <th className="px-6 font-normal">Tx Hash</th>
                       <th className="px-6 font-normal">Veto status</th>
+
                     </tr>
                   </thead>
                   <tbody className="text-primary">
@@ -346,6 +351,10 @@ export function Dashboard() {
                           </td>
                           <td className="px-6 text-[#19C978]">{formatValueSaved(row.exposedValue)}</td>
                           <td className="px-6">
+                            <TxLink txHash={row.relayTxHash} />
+                          </td>
+                          <td className="px-6">
+
                             {isVetoable ? (
                               <button 
                                 onClick={() => handleVeto(row.id)}

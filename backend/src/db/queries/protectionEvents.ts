@@ -1,6 +1,6 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "../client.js";
-import { protectionEvents, permissionsRegistry, contractScanLog } from "../schema.js";
+import { protectionEvents, permissionsRegistry, contractScanLog, approvalCache } from "../schema.js";
 
 export async function insertProtectionEvent(data: {
   userAddress: string;
@@ -87,7 +87,7 @@ export async function cancelVeto(eventId: string) {
 export async function getDashboardStats(userAddress: string) {
   const normalizedUser = userAddress.toLowerCase();
   
-  // 1. Fetch aggregated stats from protection_events
+  // 1. Aggregated protection event stats
   const [eventStats] = await db
     .select({
       threatsCount: sql<number>`count(*)::int`,
@@ -101,7 +101,7 @@ export async function getDashboardStats(userAddress: string) {
       )
     );
 
-  // 2. Fetch budget information from permissions_registry
+  // 2. Budget information from permissions_registry
   const [permission] = await db
     .select({
       budgetCap: permissionsRegistry.budgetCap,
@@ -116,9 +116,25 @@ export async function getDashboardStats(userAddress: string) {
     )
     .limit(1);
 
+  // 3. Total active exposure = SUM of all current allowances in the approval cache.
+  //    This is the real "Assets Protected" value — what Miiso is actively guarding.
+  const [exposureStats] = await db
+    .select({
+      totalActiveExposure: sql<string>`coalesce(sum(${approvalCache.allowance}), 0)::text`
+    })
+    .from(approvalCache)
+    .where(
+      and(
+        eq(approvalCache.userAddress, normalizedUser),
+        sql`${approvalCache.allowance} > 0`
+      )
+    );
+
   return {
     threatsDetected: eventStats?.threatsCount || 0,
     totalSaved: eventStats?.totalSaved || "0",
+    // Total value of active token approvals currently under Miiso's guard
+    totalActiveExposure: exposureStats?.totalActiveExposure || "0",
     budgetCap: permission?.budgetCap || "0",
     budgetSpent: permission?.budgetSpent || "0",
     budgetRemaining: (

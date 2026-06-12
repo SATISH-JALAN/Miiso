@@ -1,4 +1,32 @@
-import { pgTable, text, timestamp, boolean, numeric, uuid, integer, bigint, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, numeric, uuid, integer, bigint, unique, customType } from "drizzle-orm/pg-core";
+
+// ── pgvector custom type ──────────────────────────────────────────────────────
+// Uses Neon/Postgres pgvector extension for native vector(1536) column type.
+// Required SQL (run once on DB):
+//   CREATE EXTENSION IF NOT EXISTS vector;
+//   CREATE INDEX idx_threat_embedding ON threat_intel_catalog
+//     USING hnsw (embedding vector_cosine_ops);
+//
+// If pgvector is not available (local dev without extension), the column
+// falls back to a text column and the JS cosine-similarity fallback in
+// db/queries/threatIntel.ts is used automatically.
+
+const vector = customType<{ data: number[]; driverData: string }>({
+  dataType() {
+    return "vector(1536)";
+  },
+  toDriver(value: number[]): string {
+    // Postgres vector literal: '[0.1, 0.2, ...]'
+    return `[${value.join(",")}]`;
+  },
+  fromDriver(value: string): number[] {
+    // Strip brackets and parse
+    return value
+      .replace(/^\[|\]$/g, "")
+      .split(",")
+      .map(Number);
+  },
+});
 
 // 1. Permissions Registry (ERC-7715 Permissions)
 export const permissionsRegistry = pgTable("permissions_registry", {
@@ -46,12 +74,16 @@ export const protectionEvents = pgTable("protection_events", {
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-// 4. Threat Intel Catalog (embeddings stored as JSON text — pgvector not required)
+// 4. Threat Intel Catalog — uses native pgvector vector(1536) column.
+//    Requires: CREATE EXTENSION IF NOT EXISTS vector; (see above)
+//    Fallback: if pgvector is unavailable, db/queries/threatIntel.ts
+//    automatically falls back to JS-side cosine similarity over all rows.
 export const threatIntelCatalog = pgTable("threat_intel_catalog", {
   id: uuid("id").defaultRandom().primaryKey(),
   bytecodeHash: text("bytecode_hash").notNull().unique(),
   bytecode: text("bytecode").notNull(),
-  embedding: text("embedding").notNull(), // JSON-serialized number[] array
+  // Native vector(1536) column — enables HNSW cosine similarity via pgvector
+  embedding: vector("embedding").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
@@ -64,6 +96,8 @@ export const whitelist = pgTable("whitelist", {
 });
 
 // 6. Token Approval Cache (to scale dashboard spender loading)
+//    The SUM(allowance) over this table gives "Assets Protected" —
+//    the total token value currently under Miiso's guard.
 export const approvalCache = pgTable("approval_cache", {
   id: uuid("id").defaultRandom().primaryKey(),
   userAddress: text("user_address").notNull(),

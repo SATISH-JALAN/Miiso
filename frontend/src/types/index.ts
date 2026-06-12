@@ -31,10 +31,13 @@ export interface ProtectionEvent {
 export interface DashboardStats {
   threatsDetected: number;
   totalSaved: string;
+  /** Sum of all active token allowances in approval_cache — the real "Assets Protected" value */
+  totalActiveExposure: string;
   budgetCap: string;
   budgetSpent: string;
   budgetRemaining: string;
 }
+
 
 export type SecurityProfile = "safe" | "balanced" | "manual";
 

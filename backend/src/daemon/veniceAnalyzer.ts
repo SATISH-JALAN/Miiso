@@ -4,6 +4,7 @@ import {
   cacheBearerFromResponse,
   clearCachedBearer,
 } from "./siweAuth.js";
+import { payForInference } from "../payments/x402Client.js";
 import { trackVeniceCost } from "../utils/cost.js";
 import { retryWithBackoff } from "../utils/retry.js";
 import { logger } from "../utils/logger.js";
@@ -160,6 +161,68 @@ async function callVeniceAPI(
     });
 
     clearTimeout(timeoutId);
+
+    // ── Handle 402 Payment Required (x402 auto top-up) ──────────────────
+    if (response.status === 402) {
+      logger.warn(
+        `[VeniceAnalyzer] Venice returned 402 Payment Required for ${contractAddress.slice(0, 8)} — triggering x402 USDC top-up...`
+      );
+
+      try {
+        // Estimate ~2,500 tokens for a typical scan (2000 input + 500 output)
+        const topUp = await payForInference(2500);
+        logger.info(
+          `[VeniceAnalyzer] x402 top-up sent: txHash=${topUp.txHash.slice(0, 10)}... amount=$${topUp.amountUsdc.toFixed(6)}`
+        );
+      } catch (payErr: unknown) {
+        const msg = payErr instanceof Error ? payErr.message : String(payErr);
+        logger.error(`[VeniceAnalyzer] x402 top-up failed: ${msg}`);
+        throw new Error(`x402 payment failed — cannot proceed with Venice analysis: ${msg}`);
+      }
+
+      // Retry after top-up with a fresh SIWE header
+      clearCachedBearer();
+      const { header: freshHeader } = await buildSiweHeader();
+      const freshIsBearer = freshHeader.startsWith("Bearer ");
+
+      const retryAfterPayment = new AbortController();
+      const retryPaymentTimeout = setTimeout(() => retryAfterPayment.abort(), 15_000);
+
+      const paymentRetryResponse = await fetch(
+        `${VENICE_API_URL}/chat/completions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(freshIsBearer
+              ? { Authorization: freshHeader }
+              : { "X-Sign-In-With-Ethereum": Buffer.from(freshHeader).toString("base64") }),
+          },
+          body: JSON.stringify({
+            model: VENICE_MODEL,
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: userPrompt },
+            ],
+            max_tokens: 500,
+            temperature: 0.1,
+            stream: false,
+          }),
+          signal: retryAfterPayment.signal,
+        }
+      );
+
+      clearTimeout(retryPaymentTimeout);
+
+      if (!paymentRetryResponse.ok) {
+        throw new Error(
+          `HTTP ${paymentRetryResponse.status}: Venice API error after x402 top-up`
+        );
+      }
+
+      cacheBearerFromResponse(paymentRetryResponse.headers);
+      return parseVeniceResponse(await paymentRetryResponse.json());
+    }
 
     // On 401 — clear cached bearer and retry with fresh SIWE
     if (response.status === 401) {
