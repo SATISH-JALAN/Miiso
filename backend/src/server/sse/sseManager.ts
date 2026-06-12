@@ -75,10 +75,17 @@ class SseManager {
     }
   }
 
-  /**
-   * Pushes an event to all open connections registered to a user.
-   */
   public sendEventToUser(userAddress: string, eventName: string, data: any) {
+    if (userAddress === "*") {
+      logger.debug(`⚡ SSE: Broadcasting event ${eventName} to all clients`);
+      for (const replySet of this.clients.values()) {
+        for (const reply of replySet) {
+          this.sendEventToReply(reply, eventName, data);
+        }
+      }
+      return;
+    }
+
     const normalized = userAddress.toLowerCase();
     const userClients = this.clients.get(normalized);
 

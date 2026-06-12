@@ -4,6 +4,7 @@ import { useWallet, ProtectionEvent, ApprovalInfo } from './WalletContext';
 import { useState } from 'react';
 import { VetoTimer } from './components/dashboard/VetoTimer';
 import { TxLink } from './components/shared/TxLink';
+import { useStore } from './store';
 
 
 export function Dashboard() {
@@ -14,14 +15,16 @@ export function Dashboard() {
     approvals, 
     history, 
     connectWallet, 
-    revokeApproval, 
+    revokeApproval,
     batchRevokeApprovals,
     vetoAction,
+    executeVetoAction,
     isLoading 
   } = useWallet();
 
   const [revokingStates, setRevokingStates] = useState<Record<string, boolean>>({});
   const [vetoingStates, setVetoingStates] = useState<Record<string, boolean>>({});
+  const [executingStates, setExecutingStates] = useState<Record<string, boolean>>({});
   const [selectedThreat, setSelectedThreat] = useState<ProtectionEvent | null>(null);
   const [isBatchRevoking, setIsBatchRevoking] = useState(false);
 
@@ -69,6 +72,15 @@ export function Dashboard() {
     }
   };
 
+  const handleExecuteVeto = async (eventId: string) => {
+    setExecutingStates(prev => ({ ...prev, [eventId]: true }));
+    try {
+      await executeVetoAction(eventId);
+    } finally {
+      setExecutingStates(prev => ({ ...prev, [eventId]: false }));
+    }
+  };
+
   if (!isConnected) {
     return (
       <div className="pt-32 pb-24 px-4 sm:px-6 max-w-md mx-auto min-h-screen flex flex-col justify-center items-center">
@@ -99,12 +111,26 @@ export function Dashboard() {
 
   // Convert stats totalSaved in Wei to a human readable estimated USD representation (assuming WETH = $3000)
   const formatValueSaved = (weiStr: string) => {
+    if (!weiStr) return "$0";
+    if (weiStr.startsWith("$")) return weiStr;
     try {
       const val = parseFloat(weiStr) / 1e18;
       if (val === 0) return "$0";
       return `$${(val * 3000).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
     } catch {
       return "$0";
+    }
+  };
+
+  const formatFee = (weiStr: string) => {
+    if (!weiStr) return "-";
+    if (weiStr.startsWith("$")) return "-";
+    try {
+      const val = parseFloat(weiStr) / 1e18;
+      if (val === 0) return "-";
+      return `$${(val * 3000 * 0.015).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+    } catch {
+      return "-";
     }
   };
 
@@ -139,10 +165,33 @@ export function Dashboard() {
           <span className="text-[#E1E0CC] font-mono text-sm">{formatAddr(walletAddress || "")}</span>
         </div>
         <div className="flex items-center gap-6 text-sm">
+          {(() => {
+            const { permissionContext } = useStore.getState();
+            let daysLeft = "N/A";
+            try {
+              if (permissionContext) {
+                const parsed = JSON.parse(permissionContext);
+                if (parsed.expiry) {
+                  // If expiry is ISO string, parse it. If it's unix timestamp in seconds, parse it.
+                  const expiryDate = new Date(typeof parsed.expiry === 'string' ? parsed.expiry : parsed.expiry * 1000);
+                  const diffTime = Math.max(0, expiryDate.getTime() - Date.now());
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  daysLeft = `${diffDays} days`;
+                }
+              }
+            } catch (e) { /* ignore */ }
+            
+            return (
+              <div className="flex flex-col items-end">
+                <span className="text-gray-500 text-xs">Permission Expiry</span>
+                <span className="text-[#E1E0CC] font-mono">{daysLeft}</span>
+              </div>
+            );
+          })()}
           <div className="flex flex-col items-end">
             <span className="text-gray-500 text-xs">USDC Budget Remaining</span>
             <span className="text-[#19C978] font-mono">
-              {formatBudget(stats?.budgetRemaining || "0")} / {formatBudget(stats?.budgetCap || "0")} WETH
+              {formatBudget(stats?.budgetRemaining || "0")} / {formatBudget(stats?.budgetCap || "0")} USDC
             </span>
           </div>
         </div>
@@ -164,6 +213,8 @@ export function Dashboard() {
                 action={action}
                 onVeto={handleVeto}
                 isVetoing={!!vetoingStates[action.id]}
+                onExecuteVeto={handleExecuteVeto}
+                isExecuting={!!executingStates[action.id]}
               />
             ))}
           </div>
@@ -199,12 +250,16 @@ export function Dashboard() {
             ) : (
               history.map((log: ProtectionEvent) => {
                 const isRevocation = log.actionType === "revocation";
+                const isClean = log.actionType === "clean";
                 const isVetoed = log.vetoCancelled;
                 
                 let statusText = "MONITORING";
                 let statusColor = "bg-white/5 text-gray-500";
                 
-                if (isVetoed) {
+                if (isClean) {
+                  statusText = `CLEAN — ${log.exposedValue}`;
+                  statusColor = "bg-[#19C978]/10 text-[#19C978]";
+                } else if (isVetoed) {
                   statusText = "VETOED";
                   statusColor = "bg-red-500/10 text-[#EF4444]";
                 } else if (log.relayStatus === "confirmed") {
@@ -216,33 +271,39 @@ export function Dashboard() {
                 }
 
                 return (
-                  <div key={log.id} className="bg-[#0B0B0C] p-3 rounded-lg border border-white/5 flex flex-col gap-2">
+                  <div key={log.id} className={`bg-[#0B0B0C] p-3 rounded-lg border flex flex-col gap-2 ${isClean ? 'border-[#19C978]/20' : 'border-white/5'}`}>
                     <div className="flex justify-between items-start">
                       <span className="text-gray-400 hover:text-white cursor-pointer transition-colors underline decoration-white/20">
                         {formatAddr(log.spenderAddress)}
                       </span>
                       <span className="text-gray-500">{new Date(log.createdAt).toLocaleTimeString()}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className={log.severity === "high" ? "text-[#EF4444]" : "text-[#F59E0B]"}>
-                        {log.staticFlags && log.staticFlags.length > 0 
-                          ? log.staticFlags[0].replace(/_/g, " ") 
-                          : (isRevocation ? "Reentrancy" : "Dangerous Flow")}
-                      </span>
-                      <span className="bg-white/5 px-2 py-0.5 rounded text-gray-300">
-                        Score: {log.confidence ? `${(parseFloat(log.confidence) * 100).toFixed(1)}%` : (log.severity === "high" ? "98.7%" : "72.4%")}
-                      </span>
-                    </div>
+                    
+                    {!isClean && (
+                      <div className="flex justify-between items-center">
+                        <span className={log.severity === "high" ? "text-[#EF4444]" : "text-[#F59E0B]"}>
+                          {log.staticFlags && log.staticFlags.length > 0 
+                            ? log.staticFlags[0].replace(/_/g, " ") 
+                            : (isRevocation ? "Reentrancy" : "Dangerous Flow")}
+                        </span>
+                        <span className="bg-white/5 px-2 py-0.5 rounded text-gray-300">
+                          Score: {log.confidence ? `${(parseFloat(log.confidence) * 100).toFixed(1)}%` : (log.severity === "high" ? "98.7%" : "72.4%")}
+                        </span>
+                      </div>
+                    )}
+                    
                     <div className="flex justify-between items-center mt-1">
                       <span className={`px-2 py-0.5 inline-block rounded font-bold tracking-widest uppercase text-[10px] ${statusColor}`}>
                         {statusText}
                       </span>
-                      <button 
-                        onClick={() => setSelectedThreat(log)}
-                        className="text-[10px] text-[#19C978] hover:text-[#14a361] transition-colors flex items-center gap-1 font-sans font-semibold"
-                      >
-                        <HelpCircle className="w-3 h-3" /> Why?
-                      </button>
+                      {!isClean && (
+                        <button 
+                          onClick={() => setSelectedThreat(log)}
+                          className="text-[10px] text-[#19C978] hover:text-[#14a361] transition-colors flex items-center gap-1 font-sans font-semibold"
+                        >
+                          <HelpCircle className="w-3 h-3" /> Why?
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -333,6 +394,7 @@ export function Dashboard() {
                       <th className="px-6 font-normal">Date/Time</th>
                       <th className="px-6 font-normal">Threat/Action</th>
                       <th className="px-6 font-normal">Value At Risk</th>
+                      <th className="px-6 font-normal">Fee (1.5%)</th>
                       <th className="px-6 font-normal">Tx Hash</th>
                       <th className="px-6 font-normal">Veto status</th>
 
@@ -350,8 +412,13 @@ export function Dashboard() {
                             {row.actionType === "revocation" ? "Auto-revoked (Tier 1)" : "Veto Cooldown (Tier 2)"}
                           </td>
                           <td className="px-6 text-[#19C978]">{formatValueSaved(row.exposedValue)}</td>
+                          <td className="px-6 text-gray-400">
+                            {(row.actionType === "revocation" || (row.actionType === "veto" && row.relayStatus === "confirmed"))
+                              ? formatFee(row.exposedValue)
+                              : "-"}
+                          </td>
                           <td className="px-6">
-                            <TxLink txHash={row.relayTxHash} />
+                            <TxLink txHash={row.relayTxHash || ""} />
                           </td>
                           <td className="px-6">
 

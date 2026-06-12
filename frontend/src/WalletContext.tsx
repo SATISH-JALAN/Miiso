@@ -3,7 +3,7 @@ import { useStore } from './store/index';
 import { useSSE } from './hooks/useSSE';
 import { useDashboard } from './hooks/useDashboard';
 import { usePermission } from './hooks/usePermission';
-import { postRevoke, postBatchRevoke, postVeto, updateProfile } from './lib/api';
+import { postRevoke, postBatchRevoke, postVeto, postExecuteVeto, updateProfile } from './lib/api';
 import type { ApprovalInfo, ProtectionEvent, DashboardStats, SecurityProfile } from './types/index';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 
@@ -23,6 +23,7 @@ interface WalletContextType {
   revokeApproval: (tokenAddress: string, spenderAddress: string, rawAllowance: string) => Promise<boolean>;
   batchRevokeApprovals: (approvalsToRevoke: { tokenAddress: string; spenderAddress: string; rawAllowance: string }[]) => Promise<boolean>;
   vetoAction: (eventId: string) => Promise<boolean>;
+  executeVetoAction: (eventId: string) => Promise<boolean>;
   updateSecurityProfile: (profile: SecurityProfile) => Promise<boolean>;
   disableGuard: () => Promise<boolean>;
 }
@@ -157,6 +158,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Immediate execution of veto staged event
+  const executeVetoAction = async (eventId: string): Promise<boolean> => {
+    try {
+      const res = await postExecuteVeto(eventId);
+      if (res.executed) {
+        await refreshAllData();
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Execute veto action failed:", err);
+      return false;
+    }
+  };
+
   const batchRevokeApprovals = async (approvalsToRevoke: { tokenAddress: string; spenderAddress: string; rawAllowance: string }[]): Promise<boolean> => {
     if (!walletAddress) return false;
     try {
@@ -253,6 +269,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       revokeApproval,
       batchRevokeApprovals,
       vetoAction,
+      executeVetoAction,
       updateSecurityProfile,
       disableGuard
     }}>

@@ -1,6 +1,8 @@
 import { Settings as SettingsIcon, Shield, ListPlus, CreditCard, User, AlertOctagon, Info } from 'lucide-react';
 import { useState } from 'react';
 import { useWallet } from './WalletContext';
+import { usePermission } from './hooks/usePermission';
+import { useStore } from './store/index';
 
 export function Settings() {
   const {
@@ -22,6 +24,10 @@ export function Settings() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [profileUpdating, setProfileUpdating] = useState<'safe' | 'balanced' | 'manual' | null>(null);
   const [isDisablingGuard, setIsDisablingGuard] = useState(false);
+  const [isRenewing, setIsRenewing] = useState(false);
+
+  const { grantPermission } = usePermission();
+  const permissionContext = useStore((s) => s.permissionContext);
 
   const handleDisableGuard = async () => {
     if (window.confirm("Are you sure you want to disable Miiso Protection Guard? This will revoke on-chain session authority and relayer protections.")) {
@@ -33,6 +39,19 @@ export function Settings() {
       } finally {
         setIsDisablingGuard(false);
       }
+    }
+  };
+
+  const handleRenew = async () => {
+    setIsRenewing(true);
+    try {
+      await grantPermission(budget, whitelist);
+      alert("Permission successfully renewed for 30 days.");
+    } catch (err) {
+      console.error("Failed to renew permission:", err);
+      alert("Renewal failed. Check console.");
+    } finally {
+      setIsRenewing(false);
     }
   };
 
@@ -58,6 +77,22 @@ export function Settings() {
       return "0.00";
     }
   };
+
+  let expiryString = "N/A";
+  let isExpired = false;
+  if (permissionContext) {
+    try {
+      const parsed = JSON.parse(permissionContext);
+      if (parsed.expiry) {
+        const expiryDate = new Date(typeof parsed.expiry === 'string' ? parsed.expiry : parsed.expiry * 1000);
+        expiryString = expiryDate.toLocaleString();
+        if (expiryDate.getTime() < Date.now()) {
+          isExpired = true;
+          expiryString += " (EXPIRED)";
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
 
   if (!isConnected) {
     return (
@@ -211,12 +246,12 @@ export function Settings() {
                 Active Relayer Delegations
               </h2>
               
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
                 <div className="bg-black p-4 rounded-xl border border-white/5">
                   <div className="text-xs text-gray-500 mb-1">Relayer Status</div>
-                  <div className="text-[#19C978] font-medium text-sm flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 bg-[#19C978] rounded-full animate-pulse"/> 
-                    CONNECTED
+                  <div className={`font-medium text-sm flex items-center gap-2 ${isExpired ? "text-[#EF4444]" : "text-[#19C978]"}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${isExpired ? "bg-[#EF4444]" : "bg-[#19C978] animate-pulse"}`}/> 
+                    {isExpired ? "EXPIRED" : "CONNECTED"}
                   </div>
                 </div>
                 <div className="bg-black p-4 rounded-xl border border-white/5">
@@ -226,14 +261,29 @@ export function Settings() {
                 <div className="bg-black p-4 rounded-xl border border-white/5">
                   <div className="text-xs text-gray-500 mb-1">Budget Spent</div>
                   <div className="text-[#E1E0CC] font-medium text-sm">
-                    {formatBudget(stats?.budgetSpent || "0")} WETH
+                    {formatBudget(stats?.budgetSpent || "0")} USDC
+                  </div>
+                </div>
+                <div className="bg-black p-4 rounded-xl border border-white/5">
+                  <div className="text-xs text-gray-500 mb-1">Expires</div>
+                  <div className={`font-medium text-sm text-[#E1E0CC]`}>
+                    {expiryString}
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                 <button className="flex-1 bg-white/5 hover:bg-white/10 text-[#E1E0CC] px-4 py-3 rounded-xl text-sm transition-colors font-medium">
-                   Renew EIP-7715 Session
+                 <button 
+                   onClick={handleRenew} 
+                   disabled={isRenewing}
+                   className="flex-1 bg-white/5 hover:bg-white/10 text-[#E1E0CC] px-4 py-3 rounded-xl text-sm transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                 >
+                   {isRenewing ? (
+                     <>
+                       <div className="w-4 h-4 border-2 border-t-transparent border-[#E1E0CC] rounded-full animate-spin" />
+                       Renewing...
+                     </>
+                   ) : "Renew EIP-7715 Session"}
                  </button>
                  <button className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-3 rounded-xl text-sm transition-colors font-medium flex items-center justify-center gap-2" onClick={handleDisableGuard} disabled={isDisablingGuard}>
                    {isDisablingGuard ? (

@@ -15,9 +15,9 @@ export interface ProtectionEvent {
   tokenAddress: string;
   spenderAddress: string;
   exposedValue: string;
-  actionType: "revocation" | "veto";
-  relayTxHash: string;
-  relayStatus: "pending" | "confirmed" | "failed";
+  actionType: "revocation" | "veto" | "clean";
+  relayTxHash?: string | null;
+  relayStatus?: "pending" | "confirmed" | "failed" | null;
   severity: "high" | "medium" | "low";
   vetoCancelled: boolean;
   stagedUntil: string | null;

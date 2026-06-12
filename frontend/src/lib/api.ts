@@ -73,6 +73,13 @@ export function postVeto(eventId: string) {
   });
 }
 
+export function postExecuteVeto(eventId: string) {
+  return request<{ executed: boolean; eventId: string }>(`/api/veto/execute/${eventId}`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
 // ── Manual Revoke ────────────────────────────────────────────────
 export function postRevoke(body: {
   userAddress: string;

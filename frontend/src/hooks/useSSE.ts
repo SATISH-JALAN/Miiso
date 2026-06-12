@@ -71,6 +71,26 @@ export function useSSE(userAddress: string | null) {
         } catch { /* ignore */ }
       });
 
+      es.addEventListener("CLEAN_SCAN", (e: any) => {
+        try {
+          const data = JSON.parse(e.data);
+          console.log("✨ SSE: CLEAN_SCAN received", data);
+          const cleanEvent: ProtectionEvent = {
+            id: `clean-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            userAddress: userAddress!,
+            tokenAddress: "N/A", // Not a specific token, just a scan
+            spenderAddress: data.contractAddress,
+            exposedValue: data.inferenceCostUsdc ? `$${data.inferenceCostUsdc.toFixed(5)}` : "$0.00095",
+            actionType: "clean",
+            severity: "low",
+            vetoCancelled: false,
+            stagedUntil: null,
+            createdAt: data.timestamp || new Date().toISOString()
+          };
+          appendEvent(cleanEvent);
+        } catch { /* ignore */ }
+      });
+
       // Auto-reconnect on error (3s delay)
       es.onerror = () => {
         es.close();

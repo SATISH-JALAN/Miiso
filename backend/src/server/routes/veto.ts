@@ -2,8 +2,10 @@ import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { db } from "../../db/client.js";
 import { protectionEvents } from "../../db/schema.js";
 import { cancelVeto } from "../../db/queries/protectionEvents.js";
+import { getActivePermission } from "../../db/queries/permissions.js";
 import { sseManager } from "../sse/sseManager.js";
 import { stagedTimers } from "../../daemon/confidenceRouter.js";
+import { executeRevocation } from "../../daemon/revocationExecutor.js";
 import { eq, and, sql } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
 
@@ -97,6 +99,80 @@ export async function vetoRoutes(
         return reply.code(500).send({
           error: "VetoProcessingError",
           message: "An error occurred while canceling the scheduled protection action",
+        });
+      }
+    }
+  );
+
+  fastify.post<{ Params: { eventId: string } }>(
+    "/veto/execute/:eventId",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["eventId"],
+          properties: {
+            eventId: { type: "string", format: "uuid" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { eventId } = request.params;
+
+      try {
+        const [event] = await db
+          .select()
+          .from(protectionEvents)
+          .where(eq(protectionEvents.id, eventId))
+          .limit(1);
+
+        if (!event || (event.relayStatus !== "staged" && event.relayStatus !== "pending")) {
+          logger.warn(`[VetoExecute] Event ${eventId} not found or already executed/cancelled`);
+          return reply.status(404).send({
+            error: "EventNotFound",
+            message: "Event not found or already executed",
+          });
+        }
+
+        if (event.vetoCancelled) {
+          return reply.status(409).send({
+            error: "AlreadyVetoed",
+            message: "This event was already vetoed and cannot be executed.",
+          });
+        }
+
+        logger.info(`🔥 [VetoExecute] Immediate execution triggered for event ${eventId} (User: ${event.userAddress})`);
+
+        // Clear the in-memory timer
+        if (stagedTimers.has(eventId)) {
+          clearTimeout(stagedTimers.get(eventId));
+          stagedTimers.delete(eventId);
+          logger.info(`[VetoExecute] Cleared in-memory staged timer for event ${eventId}`);
+        }
+
+        const permission = await getActivePermission(event.userAddress);
+        if (!permission) {
+          logger.error(`❌ [VetoExecute] Cannot execute. User ${event.userAddress} revoked Miiso delegation permissions.`);
+          return reply.status(403).send({ error: "NoPermission", message: "User revoked delegation" });
+        }
+
+        await executeRevocation({
+          userAddress: event.userAddress,
+          tokenAddress: event.tokenAddress,
+          spenderAddress: event.spenderAddress,
+          exposedValue: event.exposedValue,
+          permissionContext: permission.permissionContext,
+          delegationHash: permission.delegationHash,
+          severity: event.severity as "medium" | "high"
+        });
+
+        return reply.code(200).send({ executed: true, eventId });
+      } catch (error: unknown) {
+        logger.error(`❌ [VetoExecute] Failed to immediately execute event ${eventId}:`, error);
+        return reply.code(500).send({
+          error: "ExecutionError",
+          message: "An error occurred while executing the scheduled protection action",
         });
       }
     }

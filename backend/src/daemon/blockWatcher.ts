@@ -367,6 +367,17 @@ async function processContractDeployment(address: string, blockNumber: bigint) {
     explainer: analysisOutput?.vulnerabilities?.join("; ") ?? null
   });
 
+  // Emit CLEAN_SCAN to all connected clients if the contract is deemed safe
+  if (!isVulnerable) {
+    import("../server/sse/sseManager.js").then(({ sseManager }) => {
+      sseManager.sendEventToUser("*", "CLEAN_SCAN", {
+        contractAddress: normalizedAddress,
+        inferenceCostUsdc: decision.totalCostUsdc,
+        timestamp: new Date().toISOString()
+      });
+    }).catch(err => logger.error("Failed to dynamically import sseManager:", err));
+  }
+
   // 8. If vulnerability confirmed, catalog threat intel
   if (isVulnerable) {
     try {

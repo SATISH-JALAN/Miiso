@@ -8,20 +8,38 @@ import { usePermission } from './hooks/usePermission';
 
 export function Setup() {
   const { walletAddress, isConnected, connectWallet, refreshAllData } = useWallet();
-  const { upgradeToSmartAccount, grantPermission } = usePermission();
+  const { upgradeToSmartAccount, grantPermission, checkIsSmartAccount } = usePermission();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
   // Setup Wizard Custom configurations
-  const [budgetCap, setBudgetCap] = useState(100);
+  const [budgetCap, setBudgetCap] = useState(5);
   const [whitelist, setWhitelist] = useState<string[]>([]);
   const [newWhitelistAddress, setNewWhitelistAddress] = useState('');
 
-  // Automatically advance to Step 2 if wallet connects while on Step 1
+  // Automatically advance to Step 2 or 3 if wallet connects while on Step 1
   useEffect(() => {
-    if (isConnected && step === 1) {
-      setStep(2);
+    async function checkUpgradeStatus() {
+      if (isConnected && step === 1) {
+        setLoading(true);
+        try {
+          const isSmart = await checkIsSmartAccount();
+          
+          if (isSmart) {
+            console.log("Wallet is already a smart account, skipping Step 2.");
+            setStep(3);
+          } else {
+            setStep(2);
+          }
+        } catch (err) {
+          console.error("Failed to check smart account status:", err);
+          setStep(2); // default to step 2 if check fails
+        } finally {
+          setLoading(false);
+        }
+      }
     }
+    checkUpgradeStatus();
   }, [isConnected, step]);
 
   const handleConnect = async () => {
@@ -182,13 +200,13 @@ export function Setup() {
                 <div className="bg-black/40 border border-white/5 p-5 rounded-2xl">
                   <div className="flex justify-between items-center mb-3">
                     <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Monthly Gas Relayer Cap</label>
-                    <span className="text-[#19C978] font-mono font-bold text-sm">{budgetCap} WETH</span>
+                    <span className="text-[#19C978] font-mono font-bold text-sm">{budgetCap} USDC</span>
                   </div>
                   <input 
                     type="range" 
-                    min="10" 
-                    max="500" 
-                    step="10" 
+                    min="1" 
+                    max="5" 
+                    step="1" 
                     value={budgetCap} 
                     onChange={(e) => setBudgetCap(Number(e.target.value))}
                     className="w-full accent-[#19C978] bg-white/10 rounded-lg h-1.5 cursor-pointer"
@@ -236,13 +254,25 @@ export function Setup() {
 
                 {/* Scope details */}
                 <div className="bg-black/60 p-4 rounded-xl border border-white/5 font-mono text-[10px] space-y-2 text-gray-500">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between border-b border-white/5 pb-1 mb-1">
                     <span>Scope Allowed</span>
                     <span className="text-[#19C978]">Revoke Token Approvals Only</span>
                   </div>
+                  <div className="flex justify-between border-b border-white/5 pb-1 mb-1">
+                    <span>Never Allowed</span>
+                    <span className="text-[#E1E0CC]">Transfer funds, swap tokens</span>
+                  </div>
+                  <div className="flex justify-between border-b border-white/5 pb-1 mb-1">
+                    <span>Duration</span>
+                    <span className="text-[#E1E0CC]">30 days (Auto-expires)</span>
+                  </div>
+                  <div className="flex justify-between border-b border-white/5 pb-1 mb-1">
+                    <span>Cost</span>
+                    <span className="text-[#E1E0CC]">Up to {budgetCap} USDC cap</span>
+                  </div>
                   <div className="flex justify-between">
-                    <span>Relayer Target</span>
-                    <span className="text-[#E1E0CC]">1Shot Gasless Relay network</span>
+                    <span>Cancellation</span>
+                    <span className="text-[#E1E0CC]">Any time, 1-click on chain</span>
                   </div>
                 </div>
               </div>
@@ -268,7 +298,10 @@ export function Setup() {
               <div className="w-20 h-20 bg-[#19C978]/10 rounded-full flex items-center justify-center mb-6">
                 <CheckCircle className="w-10 h-10 text-[#19C978]" />
               </div>
-              <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-8">Setup Complete</h2>
+              <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Setup Complete</h2>
+              <p className="text-[#19C978] mb-8 max-w-sm font-semibold tracking-wide">
+                Miiso is now active. We are watching Base for you.
+              </p>
               
               <div className="space-y-4 text-left w-full max-w-xs mb-8">
                 <div className="flex items-center gap-3">
@@ -285,9 +318,9 @@ export function Setup() {
                 </div>
               </div>
 
-              <div className="bg-white/5 rounded-xl p-4 w-full mb-8">
+              <div className="bg-white/5 rounded-xl p-4 w-full mb-8 flex justify-between">
                 <span className="text-gray-400 text-sm">Relay budget remaining:</span>
-                <span className="text-[#E1E0CC] ml-2 font-mono">100.00 USDC</span>
+                <span className="text-[#E1E0CC] ml-2 font-mono font-bold">{budgetCap}.00 USDC</span>
               </div>
 
               <Link 
