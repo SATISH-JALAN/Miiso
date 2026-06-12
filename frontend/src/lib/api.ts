@@ -87,9 +87,14 @@ export function postRevoke(body: {
   spenderAddress: string;
   rawAllowance: string;
 }) {
-  return request<{ success: boolean }>("/api/revoke-manual", {
+  return request<{ success: boolean }>("/api/revoke/manual", {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      userAddress: body.userAddress,
+      tokenAddress: body.tokenAddress,
+      spenderAddress: body.spenderAddress,
+      exposedValue: body.rawAllowance
+    }),
   });
 }
 

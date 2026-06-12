@@ -221,8 +221,17 @@ export async function scanUserApprovals(userAddress: string): Promise<ApprovalIn
 
     return activeApprovals;
 
-  } catch (rpcOfflineError) {
-    console.warn("⚠️ Scanner: Blockchain RPC offline. Returning cached approvals from database:", rpcOfflineError);
+  } catch (rpcOfflineError: any) {
+    const errMsg = rpcOfflineError?.message || "";
+    const isConnError = errMsg.includes("fetch failed") || 
+                        errMsg.includes("HTTP request failed") || 
+                        rpcOfflineError?.cause?.cause?.code === "ECONNREFUSED";
+
+    if (isConnError) {
+      console.warn("⚠️ Scanner: Blockchain RPC offline. Returning cached approvals from database.");
+    } else {
+      console.warn("⚠️ Scanner: Blockchain RPC offline. Returning cached approvals from database:", rpcOfflineError);
+    }
     
     // Fallback directly to DB cache (perfect for local testing without Anvil active)
     const cachedRecords = await getCachedApprovals(normalizedUser);

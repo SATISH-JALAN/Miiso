@@ -149,10 +149,11 @@ export async function signEIP7702Upgrade(userAddress: string): Promise<{
       await provider.request({
         method: "wallet_sendCalls",
         params: [{
-          version: "1.0",
+          version: "2.0.0",
           chainId: "0x2105", // Base (8453)
           from: userAddress,
           calls: [],
+          atomicRequired: false,
           capabilities: {
             "7702": {
               delegateAddress: "0x63c0c19a282a1b52a07dae32b", // MetaMask stateless delegator
