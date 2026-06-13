@@ -74,7 +74,12 @@ async function startRealBlockWatcher() {
       },
       onError: (error: any) => {
         const errMsg = error?.message || "";
-        const isConnectionError = errMsg.includes("fetch failed") || errMsg.includes("HTTP request failed") || errMsg.includes("failed to fetch");
+        const isConnectionError = errMsg.includes("fetch failed") || 
+                                  errMsg.includes("HTTP request failed") || 
+                                  errMsg.includes("failed to fetch") ||
+                                  errMsg.includes("socket has been closed") ||
+                                  errMsg.includes("WebSocket request failed") ||
+                                  errMsg.includes("ECONNRESET");
         
         if (isConnectionError) {
           logger.warn("⚠️ BlockWatcher: Lost connection to blockchain RPC. Suspending watcher and attempting reconnection in 15 seconds...");
