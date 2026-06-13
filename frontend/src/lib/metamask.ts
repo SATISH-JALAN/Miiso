@@ -3,7 +3,7 @@
 // No silent fallbacks — if Flask is not detected, setup is gated.
 
 const AGENT_ADDRESS = "0x6ED09F73cfe78555F950D3a325Aa38471fDF667d";
-const ENFORCER_ADDRESS = "0xe264F1f09A19505a1ca1a86D5b01E8bFdb64324A";
+const ENFORCER_ADDRESS = "0x0a1BE1E7c3838e9B3D803Be3C946c6E5abC6B6DA";
 
 /**
  * Detect whether the connected wallet supports ERC-7715 (MetaMask Flask).
