@@ -8,6 +8,11 @@ const ENFORCER_ADDRESS = "0x0a1BE1E7c3838e9B3D803Be3C946c6E5abC6B6DA";
 /**
  * Detect whether the connected wallet supports ERC-7715 (MetaMask Flask).
  * Returns { supported, reason } so the UI can show an appropriate gate screen.
+ * 
+ * Detection strategy:
+ * - Standard MetaMask does NOT have wallet_getCapabilities → throws error → not Flask
+ * - MetaMask Flask HAS wallet_getCapabilities → even if the response format varies,
+ *   the fact that it doesn't throw is strong enough signal that it's Flask.
  */
 export async function checkFlaskSupport(): Promise<{
   supported: boolean;
@@ -20,23 +25,32 @@ export async function checkFlaskSupport(): Promise<{
   try {
     const provider = (window as any).ethereum;
 
-    // wallet_getCapabilities only exists in Flask / Smart Accounts Kit
+    // wallet_getCapabilities only exists in Flask / Smart Accounts Kit.
+    // Standard MetaMask will throw "Method not found" here.
     const result = await provider.request({
       method: "wallet_getCapabilities",
     });
 
-    // Check if any chain reports wallet_grantPermissions support
-    const hasPermissions = Object.values(result || {}).some(
+    console.log("[Miiso] wallet_getCapabilities response:", JSON.stringify(result, null, 2));
+
+    // If we get here without throwing, we're in Flask.
+    // The response shape can vary across Flask versions, so we accept any non-error response.
+    // Ideally it has wallet_grantPermissions.supported === true, but we don't require it.
+    const hasExplicitPermissions = result && Object.values(result || {}).some(
       (chain: any) => chain?.["wallet_grantPermissions"]?.supported === true
     );
 
-    return {
-      supported: hasPermissions,
-      reason: hasPermissions ? null : "no_erc7715",
-    };
+    if (hasExplicitPermissions) {
+      console.log("[Miiso] ✅ Flask detected with explicit wallet_grantPermissions support");
+    } else {
+      console.log("[Miiso] ✅ Flask detected (wallet_getCapabilities succeeded, grantPermissions flag not explicit — proceeding anyway)");
+    }
+
+    return { supported: true, reason: null };
   } catch (e: any) {
     // Method not found = standard MetaMask = no ERC-7715 support
-    console.warn("[MetaMask] Flask detection failed:", e.message);
+    console.warn("[Miiso] Flask detection failed:", e.message);
+    console.warn("[Miiso] This likely means standard MetaMask is installed, not Flask.");
     return { supported: false, reason: "no_erc7715" };
   }
 }
