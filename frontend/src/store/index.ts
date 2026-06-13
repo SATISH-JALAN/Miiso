@@ -15,6 +15,10 @@ interface MiisoState {
   isConnected: boolean;
   isLoading: boolean;
 
+  // Setup flow
+  setupComplete: boolean;
+  flaskSupported: boolean | null; // null = not checked yet
+
   // Permission
   permissionContext: string | null;
 
@@ -33,6 +37,8 @@ interface MiisoState {
   // Actions
   setUserAddress: (addr: string | null) => void;
   setIsLoading: (loading: boolean) => void;
+  setSetupComplete: (complete: boolean) => void;
+  setFlaskSupported: (supported: boolean | null) => void;
   setPermission: (ctx: string | null) => void;
   setStats: (stats: DashboardStats | null) => void;
   setApprovals: (approvals: ApprovalInfo[]) => void;
@@ -55,6 +61,8 @@ export const useStore = create<MiisoState>((set, get) => ({
   userAddress: typeof window !== "undefined" ? localStorage.getItem("miiso_wallet_address") : null,
   isConnected: typeof window !== "undefined" ? !!localStorage.getItem("miiso_wallet_address") : false,
   isLoading: false,
+  setupComplete: typeof window !== "undefined" ? localStorage.getItem("miiso_setup_complete") === "true" : false,
+  flaskSupported: null,
   permissionContext: null,
   stats: null,
   approvals: [],
@@ -73,6 +81,15 @@ export const useStore = create<MiisoState>((set, get) => ({
     set({ userAddress: addr, isConnected: !!addr });
   },
   setIsLoading: (loading) => set({ isLoading: loading }),
+  setSetupComplete: (complete) => {
+    if (complete) {
+      localStorage.setItem("miiso_setup_complete", "true");
+    } else {
+      localStorage.removeItem("miiso_setup_complete");
+    }
+    set({ setupComplete: complete });
+  },
+  setFlaskSupported: (supported) => set({ flaskSupported: supported }),
   setPermission: (ctx) => set({ permissionContext: ctx }),
   setStats: (stats) => set({ stats }),
   setApprovals: (approvals) => set({ approvals }),
@@ -126,10 +143,13 @@ export const useStore = create<MiisoState>((set, get) => ({
     const { vetoTimer } = get();
     if (vetoTimer?.intervalId) clearInterval(vetoTimer.intervalId);
     localStorage.removeItem("miiso_wallet_address");
+    localStorage.removeItem("miiso_setup_complete");
     set({
       userAddress: null,
       isConnected: false,
       isLoading: false,
+      setupComplete: false,
+      flaskSupported: null,
       permissionContext: null,
       stats: null,
       approvals: [],

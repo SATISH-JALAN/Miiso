@@ -10,6 +10,7 @@ import { WalletProvider } from './WalletContext';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { config } from './lib/wagmiConfig';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 const queryClient = new QueryClient();
 
@@ -23,11 +24,23 @@ export default function App() {
               <Navbar />
               <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/research" element={<Research />} />
                 <Route path="/setup" element={<Setup />} />
-                <Route path="/alerts" element={<Alerts />} />
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/research" element={<Research />} />
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/alerts" element={
+                  <ProtectedRoute>
+                    <Alerts />
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute requireSetup>
+                    <Settings />
+                  </ProtectedRoute>
+                } />
               </Routes>
             </div>
           </BrowserRouter>
@@ -36,3 +49,4 @@ export default function App() {
     </WagmiProvider>
   );
 }
+

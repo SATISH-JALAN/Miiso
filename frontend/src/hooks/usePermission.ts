@@ -2,16 +2,18 @@
 import { useCallback } from "react";
 import { useStore } from "../store/index";
 import { requestPermissionGrant, signEIP7702Upgrade, isSmartAccount } from "../lib/metamask";
-import { postPermissions, getPermissions, deletePermissions, seedWallet } from "../lib/api";
+import { postPermissions, getPermissions, deletePermissions } from "../lib/api";
 
 const AGENT_ADDRESS = "0x6ED09F73cfe78555F950D3a325Aa38471fDF667d";
 
 /**
  * Hook for managing ERC-7715 permission lifecycle:
  * - Check if user has active permission
- * - Grant new permission (ERC-7715 or personal_sign fallback)
+ * - Grant new permission (ERC-7715 via MetaMask Flask)
  * - Upgrade EOA to Smart Account (EIP-7702)
  * - Revoke permission
+ * 
+ * No fallbacks — requires MetaMask Flask for wallet_grantPermissions.
  */
 export function usePermission() {
   const userAddress = useStore((s) => s.userAddress);
@@ -34,30 +36,18 @@ export function usePermission() {
   const grantPermission = useCallback(async (budgetCap: number, whitelistAddresses: string[] = []) => {
     if (!userAddress) throw new Error("Wallet not connected");
 
-    // 1. Try ERC-7715 / personal_sign
+    // 1. Request ERC-7715 permission via MetaMask Flask (no fallback)
     const { permissionContext, delegationHash, method } = await requestPermissionGrant(userAddress, budgetCap);
 
-    // 2. Register with backend
-    // If ERC-7715 worked, post the real context.
-    // If personal_sign fallback, also seed demo data.
-    if (method === "personal_sign") {
-      // Use the seed-wallet endpoint for demo mode
-      await seedWallet({
-        userAddress,
-        budgetCap,
-        whitelistAddresses,
-      });
-    } else {
-      // Real ERC-7715 — post the permission context
-      await postPermissions({
-        userAddress,
-        permissionContext,
-        delegationHash,
-        sessionSignerAddress: AGENT_ADDRESS,
-        budgetCap: (budgetCap * 1e18).toString(),
-        expiry: Math.floor(Date.now() / 1000) + 2592000, // 30 days
-      });
-    }
+    // 2. Register permission with backend
+    await postPermissions({
+      userAddress,
+      permissionContext,
+      delegationHash,
+      sessionSignerAddress: AGENT_ADDRESS,
+      budgetCap: (budgetCap * 1e18).toString(),
+      expiry: Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60, // 1 year
+    });
 
     setPermission(permissionContext);
     return { method, permissionContext, delegationHash };

@@ -252,11 +252,15 @@ async function processContractDeployment(address: string, blockNumber: bigint) {
   // Emit CLEAN_SCAN to all connected clients if the contract is deemed safe
   if (!isVulnerable) {
     import("../server/sse/sseManager.js").then(({ sseManager }) => {
-      sseManager.sendEventToUser("*", "CLEAN_SCAN", {
+      const scanData = {
         contractAddress: normalizedAddress,
         inferenceCostUsdc: decision.totalCostUsdc,
         timestamp: new Date().toISOString()
-      });
+      };
+      // Broadcast to authenticated user clients
+      sseManager.sendEventToUser("*", "CLEAN_SCAN", scanData);
+      // Buffer and broadcast to public landing page clients
+      sseManager.bufferAndBroadcastScan(scanData);
     }).catch(err => logger.error("Failed to dynamically import sseManager:", err));
   }
 

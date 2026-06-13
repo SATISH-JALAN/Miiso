@@ -56,8 +56,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isWagmiConnected && wagmiAddress) {
       setUserAddress(wagmiAddress);
-    } else if (!isWagmiConnected && walletAddress && !walletAddress.startsWith("0xf39f")) {
-      // Clear address if Wagmi disconnected (and it's not the demo fallback address starting with 0xf39f)
+    } else if (!isWagmiConnected && walletAddress) {
       setUserAddress(null);
     }
   }, [wagmiAddress, isWagmiConnected, setUserAddress, walletAddress]);
@@ -77,23 +76,26 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [walletAddress, fetchDashboardData, checkPermission, setSecurityProfile]);
 
-  // Connects wallet - supports wagmi first, falls back to demo account
+  // Connects wallet - MetaMask only, no fallbacks
   const connectWallet = async () => {
     setIsLoading(true);
     try {
-      if (connectors && connectors.length > 0) {
-        const result = await connectAsync({ connector: connectors[0] });
-        if (result.accounts && result.accounts[0]) {
-          setUserAddress(result.accounts[0]);
-        }
-      } else {
-        throw new Error("No connectors found");
+      if (!connectors || connectors.length === 0) {
+        throw new Error("No wallet connectors found. Please install MetaMask.");
       }
-    } catch (error) {
-      console.warn("Wagmi connection failed, falling back to demo account:", error);
-      // Fallback anyway to ensure seamless demo experience
-      const address = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
-      setUserAddress(address);
+      const result = await connectAsync({ connector: connectors[0] });
+      if (result.accounts && result.accounts[0]) {
+        setUserAddress(result.accounts[0]);
+      } else {
+        throw new Error("No accounts returned from MetaMask.");
+      }
+    } catch (error: any) {
+      console.error("Wallet connection failed:", error);
+      throw new Error(
+        error?.message?.includes("rejected")
+          ? "Connection rejected by user."
+          : "Failed to connect MetaMask. Please ensure MetaMask is installed."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -218,7 +220,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         // Since perm from getActivePermission contains the metadata, we check if delegationHash is there:
         // Actually, we can get it from the full checkPermission context or from details.
         // Let's check on-chain if using MetaMask and not local anvil default keys:
-        if (typeof window !== 'undefined' && (window as any).ethereum && !walletAddress.startsWith("0xf39f")) {
+        if (typeof window !== 'undefined' && (window as any).ethereum) {
           try {
             const DELEGATION_MANAGER_ADDRESS = "0xe264F1f09A19505a1ca1a86D5b01E8bFdb64324A";
             const provider = (window as any).ethereum;

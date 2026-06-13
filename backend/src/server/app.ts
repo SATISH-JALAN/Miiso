@@ -16,6 +16,7 @@ import { threatIntelRoutes } from "./routes/threatIntel.js";
 import { seedWalletRoutes } from "./routes/seedWallet.js";
 import { revokeBatchRoutes } from "./routes/batch.js";
 import { analyzeRoutes } from "./routes/analyze.js";
+import { publicEventsRoutes } from "./routes/publicEvents.js";
 
 export function buildApp() {
   const app = Fastify({
@@ -81,6 +82,7 @@ export function buildApp() {
   app.register(threatIntelRoutes, { prefix: "/api" });
   app.register(seedWalletRoutes, { prefix: "/api" });
   app.register(analyzeRoutes, { prefix: "/api" });
+  app.register(publicEventsRoutes, { prefix: "/api" });
 
   return app;
 }

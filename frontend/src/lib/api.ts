@@ -142,3 +142,7 @@ export function postAnalyzeContract(contractAddress: string) {
 export function getSSEUrl(address: string) {
   return `${BACKEND_URL}/api/events/${address}`;
 }
+
+export function getPublicSSEUrl() {
+  return `${BACKEND_URL}/api/events/public`;
+}

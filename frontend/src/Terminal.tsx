@@ -1,80 +1,104 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { getPublicSSEUrl } from "./lib/api";
 
 gsap.registerPlugin(ScrollTrigger);
 
+interface ScanEntry {
+  contractAddress: string;
+  inferenceCostUsdc: number;
+  timestamp: string;
+}
+
+const MAX_VISIBLE = 12;
+
+function formatAddr(addr: string) {
+  if (!addr || addr.length < 10) return addr;
+  return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+}
+
+function formatTime(iso: string) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  } catch {
+    return "––:––:––";
+  }
+}
+
+function formatCost(usdc: number) {
+  if (!usdc || usdc === 0) return "$0.00095";
+  return `$${usdc.toFixed(5)}`;
+}
+
 export function Terminal() {
   const sectionRef = useRef<HTMLElement>(null);
-  const linesRef = useRef<(HTMLDivElement | null)[]>([]);
+  const [scans, setScans] = useState<ScanEntry[]>([]);
+  const [totalScans, setTotalScans] = useState(0);
+  const [totalCost, setTotalCost] = useState(0);
+  const [connected, setConnected] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
 
+  // Connect to public SSE endpoint for real-time scans
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      // Setup elements
-      gsap.set(linesRef.current, { opacity: 0 });
+    let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout>;
+    let isMounted = true;
 
-      // Create timeline
-      const tl = gsap.timeline({
-        paused: true,
-        repeat: -1,
-        repeatDelay: 2, // After line 9, pause 2 seconds
+    function connect() {
+      if (!isMounted) return;
+
+      const url = getPublicSSEUrl();
+      es = new EventSource(url);
+
+      es.addEventListener("CONNECT_SUCCESS", () => {
+        if (isMounted) setConnected(true);
       });
 
-      // Show lines one by one
-      linesRef.current.forEach((line, i) => {
-        if (!line) return;
-        // Line 4 needs pulsing logic
-        const isAnalyzing = i === 3;
+      es.addEventListener("CLEAN_SCAN", (e: any) => {
+        try {
+          const data = JSON.parse(e.data) as ScanEntry;
+          if (isMounted) {
+            setScans(prev => {
+              const next = [data, ...prev].slice(0, MAX_VISIBLE);
+              return next;
+            });
+            setTotalScans(prev => prev + 1);
+            setTotalCost(prev => prev + (data.inferenceCostUsdc || 0.00095));
+          }
+        } catch { /* ignore parse errors */ }
+      });
 
-        tl.to(
-          line,
-          {
-            opacity: 1,
-            duration: 0.1, // Quick snap in
-          },
-          i * 0.6,
-        ); // 600ms gap
-
-        if (isAnalyzing) {
-          tl.to(
-            line,
-            {
-              opacity: 0.5,
-              duration: 0.5,
-              yoyo: true,
-              repeat: 3, // Pulse a few times while next lines appear
-              ease: "none",
-            },
-            i * 0.6 + 0.1,
-          );
+      es.onerror = () => {
+        es?.close();
+        if (isMounted) {
+          setConnected(false);
+          reconnectTimer = setTimeout(connect, 3000);
         }
-      });
+      };
+    }
 
-      // Fade all out at the end of the timeline
-      tl.to(
-        linesRef.current,
-        {
-          opacity: 0,
-          duration: 0.4,
-          ease: "power2.inOut",
-        },
-        "+=2",
-      ); // Wait 2s before fade out starts (on top of timeline end)
+    connect();
 
-      // Start/stop based on scroll
-      ScrollTrigger.create({
-        trigger: sectionRef.current,
-        start: "top 80%",
-        end: "bottom 20%",
-        onEnter: () => tl.play(),
-        onLeave: () => tl.pause(),
-        onEnterBack: () => tl.play(),
-        onLeaveBack: () => tl.pause(),
-      });
-    }, sectionRef);
-
-    return () => ctx.revert();
+    return () => {
+      isMounted = false;
+      clearTimeout(reconnectTimer);
+      es?.close();
+    };
   }, []);
+
+  // Animate new entries as they appear
+  useEffect(() => {
+    if (listRef.current && listRef.current.firstElementChild) {
+      gsap.from(listRef.current.firstElementChild, {
+        opacity: 0,
+        x: -15,
+        duration: 0.3,
+        ease: "power2.out",
+      });
+    }
+  }, [scans.length]);
 
   return (
     <section
@@ -99,136 +123,46 @@ export function Terminal() {
               <div className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
               <div className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
             </div>
-            <div className="flex-1 text-center font-mono text-[12px] text-text-secondary">
-              miiso — protection log
+            <div className="flex-1 text-center font-mono text-[12px] text-text-secondary flex items-center justify-center gap-2">
+              miiso — live protection log
+              {connected && (
+                <span className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse" />
+              )}
             </div>
           </div>
 
           {/* Body */}
-          <div className="p-6 font-mono text-[13px] leading-[1.8] text-left">
-            {/* Line 1 */}
-            <div
-              ref={(el) => {
-                linesRef.current[0] = el;
-              }}
-              className="flex justify-between"
-            >
-              <span className="text-[#10B981]">
-                21:14:02 ✓ <span className="text-[#71717A]">0x4a1f...9c2d</span>{" "}
-                CLEAN
-              </span>
-              <span className="text-[#3F3F46]">$0.00095</span>
-            </div>
-
-            {/* Line 2 */}
-            <div
-              ref={(el) => {
-                linesRef.current[1] = el;
-              }}
-              className="flex justify-between"
-            >
-              <span className="text-[#10B981]">
-                22:31:17 ✓ <span className="text-[#71717A]">0x9b3c...1e8f</span>{" "}
-                CLEAN
-              </span>
-              <span className="text-[#3F3F46]">$0.00095</span>
-            </div>
-
-            {/* Line 3 */}
-            <div
-              ref={(el) => {
-                linesRef.current[2] = el;
-              }}
-              className="flex justify-between"
-            >
-              <span className="text-[#10B981]">
-                23:48:55 ✓ <span className="text-[#71717A]">0x2f7a...4b12</span>{" "}
-                CLEAN
-              </span>
-              <span className="text-[#3F3F46]">$0.00095</span>
-            </div>
-
-            {/* Line 4 */}
-            <div
-              ref={(el) => {
-                linesRef.current[3] = el;
-              }}
-              className="flex justify-between mt-2"
-            >
-              <span className="text-[#F59E0B]">
-                03:17:08 ⚠ <span className="text-[#71717A]">0xf4a1...9d23</span>{" "}
-                ANALYZING...
-              </span>
-            </div>
-
-            {/* Line 5 */}
-            <div
-              ref={(el) => {
-                linesRef.current[4] = el;
-              }}
-              className="flex justify-between"
-            >
-              <span className="text-[#19C978]">
-                03:17:09 → Venice AI: 97.4% confidence
-              </span>
-            </div>
-
-            {/* Line 6 */}
-            <div
-              ref={(el) => {
-                linesRef.current[5] = el;
-              }}
-              className="flex justify-between"
-            >
-              <span className="text-[#19C978]">
-                03:17:09 → REENTRANCY DETECTED · Tier 1
-              </span>
-            </div>
-
-            {/* Line 7 */}
-            <div
-              ref={(el) => {
-                linesRef.current[6] = el;
-              }}
-              className="flex justify-between mt-2"
-            >
-              <span className="text-[#F59E0B]">
-                03:17:13 ⚡ approve(0) fired · 1Shot relay
-              </span>
-            </div>
-
-            {/* Line 8 */}
-            <div
-              ref={(el) => {
-                linesRef.current[7] = el;
-              }}
-              className="flex justify-between mt-2"
-            >
-              <span className="text-[#10B981]">
-                03:17:15 ✓ TX:{" "}
-                <span className="text-[#71717A]">0x9f2c...a13d</span> ·
-                CONFIRMED
-              </span>
-            </div>
-
-            {/* Line 9 */}
-            <div
-              ref={(el) => {
-                linesRef.current[8] = el;
-              }}
-              className="flex justify-between"
-            >
-              <span className="text-[#10B981]">
-                03:17:15 ✓ USDC allowance → 0 · saved $7,000
-              </span>
-            </div>
+          <div ref={listRef} className="p-6 font-mono text-[13px] leading-[1.8] text-left min-h-[280px] max-h-[400px] overflow-hidden">
+            {scans.length === 0 ? (
+              <div className="flex items-center justify-center h-[240px]">
+                <div className="text-center">
+                  <div className="w-4 h-4 border-2 border-t-transparent border-[#19C978] rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-[#3F3F46] text-sm">
+                    {connected ? "Waiting for next Base block..." : "Connecting to Base network..."}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              scans.map((scan, i) => (
+                <div key={`${scan.contractAddress}-${scan.timestamp}-${i}`} className="flex justify-between">
+                  <span className="text-[#10B981]">
+                    {formatTime(scan.timestamp)} ✓{" "}
+                    <span className="text-[#71717A]">{formatAddr(scan.contractAddress)}</span>{" "}
+                    CLEAN
+                  </span>
+                  <span className="text-[#3F3F46]">{formatCost(scan.inferenceCostUsdc)}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
         {/* Stats Row Below Terminal */}
         <div className="mt-6 flex justify-center text-center">
           <p className="font-mono text-[12px] text-[#3F3F46]">
-            4 scans · $0.0038 USDC total · 7.1 seconds · 0 user actions
+            {totalScans > 0
+              ? `${totalScans} scans · $${totalCost.toFixed(4)} USDC total · live on Base`
+              : "Listening to Base network..."}
           </p>
         </div>
       </div>

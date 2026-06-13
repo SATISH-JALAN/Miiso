@@ -2,6 +2,7 @@ import { Shield, AlertTriangle, CheckCircle, Activity, ArrowRight, Clock, X, Hel
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWallet, ProtectionEvent, ApprovalInfo } from './WalletContext';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { VetoTimer } from './components/dashboard/VetoTimer';
 import { TxLink } from './components/shared/TxLink';
 import { useStore } from './store';
@@ -24,6 +25,8 @@ export function Dashboard() {
 
   const permissionContext = useStore((s) => s.permissionContext);
   const events = useStore((s) => s.events);
+  const setupComplete = useStore((s) => s.setupComplete);
+  const isReadOnly = isConnected && !setupComplete;
   const [revokingStates, setRevokingStates] = useState<Record<string, boolean>>({});
   const [vetoingStates, setVetoingStates] = useState<Record<string, boolean>>({});
   const [executingStates, setExecutingStates] = useState<Record<string, boolean>>({});
@@ -83,26 +86,6 @@ export function Dashboard() {
     }
   };
 
-  if (!isConnected) {
-    return (
-      <div className="pt-32 pb-24 px-4 sm:px-6 max-w-md mx-auto min-h-screen flex flex-col justify-center items-center">
-        <div className="bg-[#101010] p-8 rounded-3xl border border-white/5 text-center w-full shadow-2xl">
-          <Shield className="w-16 h-16 text-[#19C978] mx-auto mb-6 animate-pulse" />
-          <h2 className="text-[#E1E0CC] font-bold text-2xl mb-2 tracking-tight">Connect Wallet</h2>
-          <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-            Please connect your wallet to access your live autonomous security dashboard and monitor active permissions.
-          </p>
-          <button 
-            onClick={connectWallet}
-            className="w-full bg-[#19C978] hover:bg-[#14a361] text-black font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-lg"
-          >
-            Connect Wallet
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // Format Helper for address display
   const formatAddr = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
 
@@ -157,35 +140,103 @@ export function Dashboard() {
 
   return (
     <div className="pt-28 pb-24 px-4 sm:px-6 max-w-7xl mx-auto min-h-screen">
+      {/* Read-only Setup Banner */}
+      {isReadOnly && (
+        <div className="mb-6 bg-[#F59E0B]/10 border border-[#F59E0B]/20 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-[#F59E0B] shrink-0" />
+            <div>
+              <p className="text-sm text-[#E1E0CC] font-medium">Setup required for autonomous protection</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Complete the setup wizard to activate live threat detection and auto-revocation.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/setup"
+            className="bg-[#F59E0B] text-black px-4 py-2 rounded-full text-xs font-bold hover:bg-[#d97706] transition-colors shrink-0 flex items-center gap-1.5"
+          >
+            Complete Setup <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+      )}
+
       {/* Top Bar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-[#101010] p-4 rounded-2xl border border-white/5 mb-8 gap-4">
         <div className="flex items-center gap-4">
-          <div className="bg-[#19C978]/10 text-[#19C978] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-            <div className="w-2 h-2 bg-[#19C978] rounded-full animate-pulse" />
-            PROTECTION ACTIVE
-          </div>
-          <span className="text-[#E1E0CC] font-mono text-sm">{formatAddr(walletAddress || "")}</span>
+          {(() => {
+            // Compute permission status
+            let permissionExpired = false;
+            let daysLeft = "N/A";
+
+            if (permissionContext && setupComplete) {
+              try {
+                const parsed = JSON.parse(permissionContext);
+                if (parsed.expiry) {
+                  const expiryDate = new Date(typeof parsed.expiry === 'string' ? parsed.expiry : parsed.expiry * 1000);
+                  const diffTime = expiryDate.getTime() - Date.now();
+                  if (diffTime <= 0) {
+                    permissionExpired = true;
+                    daysLeft = "Expired";
+                  } else {
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    daysLeft = `${diffDays} days`;
+                  }
+                }
+              } catch { /* ignore */ }
+            }
+
+            const statusBadge = isReadOnly ? (
+              <div className="bg-[#F59E0B]/10 text-[#F59E0B] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                <div className="w-2 h-2 bg-[#F59E0B] rounded-full" />
+                READ ONLY
+              </div>
+            ) : permissionExpired ? (
+              <div className="bg-red-500/10 text-[#EF4444] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                <div className="w-2 h-2 bg-[#EF4444] rounded-full" />
+                PERMISSION EXPIRED
+              </div>
+            ) : (
+              <div className="bg-[#19C978]/10 text-[#19C978] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                <div className="w-2 h-2 bg-[#19C978] rounded-full animate-pulse" />
+                PROTECTION ACTIVE
+              </div>
+            );
+
+            return (
+              <>
+                {statusBadge}
+                <span className="text-[#E1E0CC] font-mono text-sm">{formatAddr(walletAddress || "")}</span>
+              </>
+            );
+          })()}
         </div>
         <div className="flex items-center gap-6 text-sm">
           {(() => {
             let daysLeft = "N/A";
-            try {
-              if (permissionContext) {
+            let isExpired = false;
+
+            if (permissionContext && setupComplete) {
+              try {
                 const parsed = JSON.parse(permissionContext);
                 if (parsed.expiry) {
-                  // If expiry is ISO string, parse it. If it's unix timestamp in seconds, parse it.
                   const expiryDate = new Date(typeof parsed.expiry === 'string' ? parsed.expiry : parsed.expiry * 1000);
-                  const diffTime = Math.max(0, expiryDate.getTime() - Date.now());
-                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                  daysLeft = `${diffDays} days`;
+                  const diffTime = expiryDate.getTime() - Date.now();
+                  if (diffTime <= 0) {
+                    daysLeft = "Expired";
+                    isExpired = true;
+                  } else {
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    daysLeft = `${diffDays} days`;
+                  }
                 }
-              }
-            } catch (e) { /* ignore */ }
-            
+              } catch { /* ignore */ }
+            }
+
             return (
               <div className="flex flex-col items-end">
                 <span className="text-gray-500 text-xs">Permission Expiry</span>
-                <span className="text-[#E1E0CC] font-mono">{daysLeft}</span>
+                <span className={`font-mono ${isExpired ? 'text-[#EF4444]' : 'text-[#E1E0CC]'}`}>{daysLeft}</span>
               </div>
             );
           })()}

@@ -1,54 +1,82 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, ArrowRight, CheckCircle, Wallet, Loader2, ListPlus, Plus, Trash2 } from 'lucide-react';
-import { WordsPullUpMultiStyle } from './Shared';
-import { Link } from 'react-router-dom';
+import { Shield, ArrowRight, CheckCircle, Wallet, Loader2, Plus, Trash2, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useWallet } from './WalletContext';
 import { usePermission } from './hooks/usePermission';
+import { checkFlaskSupport } from './lib/metamask';
+import { useStore } from './store/index';
 
 export function Setup() {
   const { walletAddress, isConnected, connectWallet, refreshAllData } = useWallet();
   const { upgradeToSmartAccount, grantPermission, checkIsSmartAccount } = usePermission();
+  const setSetupComplete = useStore((s) => s.setSetupComplete);
+  const setFlaskSupported = useStore((s) => s.setFlaskSupported);
+  const flaskSupported = useStore((s) => s.flaskSupported);
+  const setupComplete = useStore((s) => s.setupComplete);
+  const navigate = useNavigate();
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Setup Wizard Custom configurations
   const [budgetCap, setBudgetCap] = useState(5);
   const [whitelist, setWhitelist] = useState<string[]>([]);
   const [newWhitelistAddress, setNewWhitelistAddress] = useState('');
 
-  // Automatically advance to Step 2 or 3 if wallet connects while on Step 1
+  // On wallet connect: check Flask support, then smart account status
   useEffect(() => {
-    async function checkUpgradeStatus() {
+    async function checkWalletStatus() {
       if (isConnected && step === 1) {
         setLoading(true);
+        setError(null);
         try {
+          // 1. Check Flask/ERC-7715 support
+          const flaskResult = await checkFlaskSupport();
+          setFlaskSupported(flaskResult.supported);
+
+          if (!flaskResult.supported) {
+            // Stay on step 1 but show Flask requirement
+            setStep(1);
+            setLoading(false);
+            return;
+          }
+
+          // 2. Check smart account status
           const isSmart = await checkIsSmartAccount();
-          
           if (isSmart) {
-            console.log("Wallet is already a smart account, skipping Step 2.");
-            setStep(3);
+            setStep(3); // Skip upgrade, go to permission
           } else {
-            setStep(2);
+            setStep(2); // Need upgrade
           }
         } catch (err) {
-          console.error("Failed to check smart account status:", err);
-          setStep(2); // default to step 2 if check fails
+          console.error("Failed to check wallet status:", err);
+          setStep(2);
         } finally {
           setLoading(false);
         }
       }
     }
-    checkUpgradeStatus();
+    checkWalletStatus();
   }, [isConnected, step]);
+
+  // If setup was already completed, redirect to dashboard
+  useEffect(() => {
+    if (setupComplete && isConnected) {
+      // Allow them to view setup page but show completion state
+      setStep(4);
+    }
+  }, [setupComplete, isConnected]);
 
   const handleConnect = async () => {
     setLoading(true);
+    setError(null);
     try {
       await connectWallet();
-      setStep(2);
-    } catch (err) {
-      console.error(err);
+      // The useEffect above will handle the rest
+    } catch (err: any) {
+      setError(err.message || "Failed to connect wallet");
     } finally {
       setLoading(false);
     }
@@ -56,18 +84,15 @@ export function Setup() {
 
   const handleUpgrade = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // EIP-7702 upgrade flow
       const res = await upgradeToSmartAccount();
       if (res.upgraded) {
-        console.log(`Smart account upgrade signed successfully via ${res.method}`);
         setStep(3);
-      } else {
-        alert("Failed to upgrade EOA to Smart Account. Please try again.");
       }
     } catch (err: any) {
       console.error("Upgrade error:", err);
-      alert("Upgrade failed: " + (err.message || err));
+      setError("Smart account upgrade failed: " + (err.message || "Unknown error. Ensure you are using MetaMask Flask."));
     } finally {
       setLoading(false);
     }
@@ -78,7 +103,7 @@ export function Setup() {
       setWhitelist([...whitelist, newWhitelistAddress.toLowerCase()]);
       setNewWhitelistAddress('');
     } else {
-      alert("Invalid Ethereum address format (must be 42 characters starting with 0x).");
+      setError("Invalid Ethereum address format (must be 42 characters starting with 0x).");
     }
   };
 
@@ -89,23 +114,85 @@ export function Setup() {
   const handleGrantPermission = async () => {
     if (!walletAddress) return;
     setLoading(true);
+    setError(null);
     try {
-      // 1. Request ERC-7715/EIP-7715 permission or personal_sign fallback
       const grant = await grantPermission(budgetCap, whitelist);
       console.log(`Permission granted via ${grant.method}`);
-
       await refreshAllData();
+      setSetupComplete(true);
       setStep(4);
     } catch (err: any) {
       console.error("Grant permission failed:", err);
-      alert("Failed to grant delegation permission: " + (err.message || err));
+      setError("Permission grant failed: " + (err.message || "Unknown error. Ensure MetaMask Flask approved the request."));
     } finally {
       setLoading(false);
     }
   };
 
-
   const formatAddr = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+
+  // Flask requirement screen — shown when connected but Flask not detected
+  const FlaskRequirementScreen = () => (
+    <motion.div
+      key="flask-gate"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="flex flex-col items-center text-center"
+    >
+      <div className="w-16 h-16 bg-[#F59E0B]/10 rounded-2xl flex items-center justify-center mb-6">
+        <AlertTriangle className="w-8 h-8 text-[#F59E0B]" />
+      </div>
+      <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">MetaMask Flask Required</h2>
+      
+      <div className="bg-[#F59E0B]/5 border border-[#F59E0B]/20 rounded-xl p-5 mb-6 w-full text-left">
+        <p className="text-sm text-[#E1E0CC] leading-relaxed mb-3">
+          The <strong>ERC-7715 Advanced Permissions</strong> standard that powers Miiso's delegated protection is currently available in <strong>MetaMask Flask</strong> — the developer build of MetaMask.
+        </p>
+        <p className="text-sm text-gray-400 leading-relaxed">
+          Standard MetaMask will support this in a future release.
+        </p>
+      </div>
+
+      <div className="space-y-3 w-full">
+        <a
+          href="https://metamask.io/flask/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors flex items-center justify-center gap-2"
+        >
+          <ExternalLink className="w-4 h-4" />
+          Download MetaMask Flask
+        </a>
+        <a
+          href="https://docs.metamask.io/snaps/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full bg-white/5 text-[#E1E0CC] border border-white/10 rounded-full py-3 font-medium hover:bg-white/10 transition-colors flex items-center justify-center gap-2 text-sm"
+        >
+          Learn why this is required
+        </a>
+      </div>
+
+      <div className="mt-6 bg-white/5 border border-white/5 rounded-xl p-4 w-full text-left">
+        <p className="text-[10px] text-gray-500 leading-relaxed">
+          <strong className="text-gray-400">Note:</strong> MetaMask Flask and standard MetaMask cannot run in the same browser profile. Install Flask in a separate Chrome profile or a different browser.
+        </p>
+      </div>
+
+      <button
+        onClick={() => {
+          // Re-check Flask support after user installs
+          setFlaskSupported(null);
+          setStep(1);
+          window.location.reload();
+        }}
+        className="mt-4 text-sm text-[#19C978] hover:text-[#14a361] transition-colors font-medium"
+      >
+        I've installed Flask — retry detection →
+      </button>
+    </motion.div>
+  );
 
   return (
     <div className="pt-32 pb-24 px-4 sm:px-6 max-w-2xl mx-auto min-h-screen flex flex-col items-center justify-center">
@@ -117,8 +204,28 @@ export function Setup() {
       </div>
 
       <div className="bg-[#101010] p-8 md:p-12 rounded-3xl border border-white/5 w-full relative overflow-hidden">
+        {/* Error banner */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6"
+            >
+              <p className="text-sm text-[#EF4444]">{error}</p>
+              <button onClick={() => setError(null)} className="text-xs text-gray-400 mt-2 hover:text-white">
+                Dismiss
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <AnimatePresence mode="wait">
-          {step === 1 && (
+          {/* FLASK GATE — shown after connect if Flask not detected */}
+          {isConnected && flaskSupported === false && step === 1 ? (
+            <FlaskRequirementScreen />
+          ) : step === 1 ? (
             <motion.div 
               key="step1"
               initial={{ opacity: 0, x: 20 }}
@@ -130,10 +237,10 @@ export function Setup() {
                 <Wallet className="w-8 h-8 text-[#E1E0CC]" />
               </div>
               <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Connect Wallet</h2>
-              <p className="text-primary opacity-70 mb-8 max-w-sm">Connect your MetaMask wallet to begin setup.</p>
+              <p className="text-primary opacity-70 mb-8 max-w-sm">Connect your MetaMask Flask wallet to begin setup.</p>
               
               <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-8 w-full text-left">
-                <p className="text-sm text-gray-400">Notice: 0 ETH detected in wallet.</p>
+                <p className="text-sm text-gray-400">Miiso requires MetaMask Flask for ERC-7715 permissions.</p>
                 <p className="text-sm text-[#19C978] mt-1">No ETH needed. Miiso uses USDC for gas via 1Shot Relayer.</p>
               </div>
 
@@ -143,12 +250,10 @@ export function Setup() {
                 className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Connect MetaMask
+                Connect MetaMask Flask
               </button>
             </motion.div>
-          )}
-
-          {step === 2 && (
+          ) : step === 2 ? (
             <motion.div 
               key="step2"
               initial={{ opacity: 0, x: 20 }}
@@ -160,9 +265,15 @@ export function Setup() {
                 <Shield className="w-8 h-8 text-[#E1E0CC]" />
               </div>
               <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Smart Account Upgrade</h2>
-              <p className="text-primary opacity-70 mb-8 max-w-sm">
-                Miiso upgrades your wallet to a MetaMask Smart Account using ERC-7710 and ERC-7715. This enables gasless transactions via 1Shot Relayer.
+              <p className="text-primary opacity-70 mb-4 max-w-sm">
+                Your wallet needs a one-time upgrade to a smart account. This costs $0.01 USDC. No ETH needed.
               </p>
+
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6 w-full text-left text-xs text-gray-400 space-y-2">
+                <p>• Your wallet address stays the same</p>
+                <p>• Your funds stay exactly where they are</p>
+                <p>• Enables programmable permission features (EIP-7702)</p>
+              </div>
 
               {walletAddress && (
                 <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-6 w-full text-center">
@@ -177,12 +288,10 @@ export function Setup() {
                 className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {loading ? 'Upgrading Wallet...' : 'Upgrade My Wallet'}
+                {loading ? 'Upgrading Wallet...' : 'Upgrade Account ($0.01)'}
               </button>
             </motion.div>
-          )}
-
-          {step === 3 && (
+          ) : step === 3 ? (
             <motion.div 
               key="step3"
               initial={{ opacity: 0, x: 20 }}
@@ -190,16 +299,48 @@ export function Setup() {
               exit={{ opacity: 0, x: -20 }}
               className="flex flex-col items-center text-center w-full"
             >
-              <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-2 font-medium">Customize Setup Rules</h2>
+              <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-2 font-medium">Grant Permission</h2>
               <p className="text-gray-400 text-sm mb-8 max-w-sm">
-                Configure your auto-pilot gas buffer limit and add trusted protocol contracts before signing permissions.
+                This is the most important step. Read exactly what Miiso can and cannot do before approving.
               </p>
               
               <div className="space-y-6 w-full text-left mb-8">
-                {/* Gas Relayer Budget Limit Customization */}
+                {/* Permission scope — clear and honest */}
+                <div className="bg-black/60 p-5 rounded-xl border border-[#19C978]/20 font-mono text-xs space-y-3">
+                  <div className="flex justify-between border-b border-white/5 pb-2">
+                    <span className="text-gray-500">What Miiso CAN do</span>
+                    <span className="text-[#19C978] font-bold">Revoke token approvals only</span>
+                  </div>
+                  <div className="flex justify-between border-b border-white/5 pb-2">
+                    <span className="text-gray-500">Transfer funds</span>
+                    <span className="text-[#EF4444]">Never</span>
+                  </div>
+                  <div className="flex justify-between border-b border-white/5 pb-2">
+                    <span className="text-gray-500">Swap tokens</span>
+                    <span className="text-[#EF4444]">Never</span>
+                  </div>
+                  <div className="flex justify-between border-b border-white/5 pb-2">
+                    <span className="text-gray-500">Touch your balance</span>
+                    <span className="text-[#EF4444]">Never</span>
+                  </div>
+                  <div className="flex justify-between border-b border-white/5 pb-2">
+                    <span className="text-gray-500">Duration</span>
+                    <span className="text-[#E1E0CC]">30 days, renewable</span>
+                  </div>
+                  <div className="flex justify-between border-b border-white/5 pb-2">
+                    <span className="text-gray-500">Cost</span>
+                    <span className="text-[#E1E0CC]">Up to {budgetCap} USDC cap</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Cancellation</span>
+                    <span className="text-[#E1E0CC]">One click, any time, instant</span>
+                  </div>
+                </div>
+
+                {/* Gas Relayer Budget */}
                 <div className="bg-black/40 border border-white/5 p-5 rounded-2xl">
                   <div className="flex justify-between items-center mb-3">
-                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Monthly Gas Relayer Cap</label>
+                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Monthly USDC Budget Cap</label>
                     <span className="text-[#19C978] font-mono font-bold text-sm">{budgetCap} USDC</span>
                   </div>
                   <input 
@@ -211,12 +352,11 @@ export function Setup() {
                     onChange={(e) => setBudgetCap(Number(e.target.value))}
                     className="w-full accent-[#19C978] bg-white/10 rounded-lg h-1.5 cursor-pointer"
                   />
-                  <p className="text-[10px] text-gray-500 mt-2">Max allowed gas used by Sentinel for automated, gasless veto/revocation relays.</p>
                 </div>
 
-                {/* Whitelisting Smart Contracts */}
+                {/* Whitelist */}
                 <div className="bg-black/40 border border-white/5 p-5 rounded-2xl">
-                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest block mb-2">Trusted Protocols Whitelist</label>
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest block mb-2">Trusted Protocols (Optional)</label>
                   <div className="flex gap-2 mb-4">
                     <input 
                       type="text" 
@@ -248,32 +388,8 @@ export function Setup() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-[10px] text-gray-500 italic">No custom whitelisted protocols added yet. You can add them later in settings.</p>
+                    <p className="text-[10px] text-gray-500 italic">No custom whitelisted protocols. You can add them later in settings.</p>
                   )}
-                </div>
-
-                {/* Scope details */}
-                <div className="bg-black/60 p-4 rounded-xl border border-white/5 font-mono text-[10px] space-y-2 text-gray-500">
-                  <div className="flex justify-between border-b border-white/5 pb-1 mb-1">
-                    <span>Scope Allowed</span>
-                    <span className="text-[#19C978]">Revoke Token Approvals Only</span>
-                  </div>
-                  <div className="flex justify-between border-b border-white/5 pb-1 mb-1">
-                    <span>Never Allowed</span>
-                    <span className="text-[#E1E0CC]">Transfer funds, swap tokens</span>
-                  </div>
-                  <div className="flex justify-between border-b border-white/5 pb-1 mb-1">
-                    <span>Duration</span>
-                    <span className="text-[#E1E0CC]">30 days (Auto-expires)</span>
-                  </div>
-                  <div className="flex justify-between border-b border-white/5 pb-1 mb-1">
-                    <span>Cost</span>
-                    <span className="text-[#E1E0CC]">Up to {budgetCap} USDC cap</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Cancellation</span>
-                    <span className="text-[#E1E0CC]">Any time, 1-click on chain</span>
-                  </div>
                 </div>
               </div>
 
@@ -283,12 +399,10 @@ export function Setup() {
                 className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-bold hover:bg-white transition-colors flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {loading ? 'Granting Permission...' : 'Approve in MetaMask'}
+                {loading ? 'Granting Permission...' : 'Grant Permission in MetaMask'}
               </button>
             </motion.div>
-          )}
-
-          {step === 4 && (
+          ) : step === 4 ? (
             <motion.div 
               key="step4"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -298,28 +412,28 @@ export function Setup() {
               <div className="w-20 h-20 bg-[#19C978]/10 rounded-full flex items-center justify-center mb-6">
                 <CheckCircle className="w-10 h-10 text-[#19C978]" />
               </div>
-              <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Setup Complete</h2>
+              <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Miiso is Active</h2>
               <p className="text-[#19C978] mb-8 max-w-sm font-semibold tracking-wide">
-                Miiso is now active. We are watching Base for you.
+                We are watching Base for you. 24/7.
               </p>
               
               <div className="space-y-4 text-left w-full max-w-xs mb-8">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-[#19C978]" />
-                  <span className="text-[#E1E0CC]">Smart account active (x402 Relayer)</span>
+                  <span className="text-[#E1E0CC]">Smart account active</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-[#19C978]" />
-                  <span className="text-[#E1E0CC]">EIP-7715 Permission granted</span>
+                  <span className="text-[#E1E0CC]">ERC-7715 Permission granted</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-[#19C978]" />
-                  <span className="text-[#E1E0CC]">Sentinel threat scanning active</span>
+                  <span className="text-[#E1E0CC]">Sentinel scanning active</span>
                 </div>
               </div>
 
               <div className="bg-white/5 rounded-xl p-4 w-full mb-8 flex justify-between">
-                <span className="text-gray-400 text-sm">Relay budget remaining:</span>
+                <span className="text-gray-400 text-sm">USDC budget remaining:</span>
                 <span className="text-[#E1E0CC] ml-2 font-mono font-bold">{budgetCap}.00 USDC</span>
               </div>
 
@@ -330,7 +444,7 @@ export function Setup() {
                 Go to Dashboard
               </Link>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
     </div>
