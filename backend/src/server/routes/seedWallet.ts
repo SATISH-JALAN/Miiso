@@ -1,7 +1,8 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { db } from "../../db/client.js";
 import { permissionsRegistry, approvalCache, protectionEvents, contractScanLog, whitelist } from "../../db/schema.js";
-import { logger } from "../../utils/logger.js";
+import { loadWhitelist } from "../../security/whitelist.js";
+import { loadUserWhitelists } from "../../db/queries/userWhitelist.js";
 
 interface SeedWalletRequestBody {
   userAddress: string;
@@ -175,6 +176,17 @@ export async function seedWalletRoutes(fastify: FastifyInstance, options: Fastif
       }
     }
   );
+
+  fastify.post("/dev/reload-cache", async (_request, reply) => {
+    try {
+      await loadWhitelist();
+      await loadUserWhitelists();
+      return reply.send({ success: true, message: "Whitelist caches reloaded from database" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ error: "ReloadFailed", message });
+    }
+  });
 
   fastify.post<{ Body: { spenderAddress: string; veniceConfidence?: number; staticRisk?: string; staticFlags?: string[] } }>(
     "/dev/simulate-threat",

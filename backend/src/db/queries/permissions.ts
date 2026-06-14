@@ -13,35 +13,43 @@ export async function createPermission(data: {
   feeAllowanceApproved?: boolean;
 }) {
   const normalizedUser = data.userAddress.toLowerCase();
-  
-  // Clean up any existing permissions first to prevent duplicate active records
-  await db
-    .update(permissionsRegistry)
-    .set({ revokedAt: new Date() })
-    .where(
-      and(
-        eq(permissionsRegistry.userAddress, normalizedUser),
-        isNull(permissionsRegistry.revokedAt)
-      )
-    );
+  const sessionSigner = data.sessionSignerAddress.toLowerCase();
+  const now = new Date();
 
-  const [inserted] = await db
+  // One row per user (unique on user_address). Upsert re-activates revoked rows
+  // instead of inserting a duplicate.
+  const [permission] = await db
     .insert(permissionsRegistry)
     .values({
       userAddress: normalizedUser,
       permissionContext: data.permissionContext,
       delegationHash: data.delegationHash,
-      sessionSignerAddress: data.sessionSignerAddress.toLowerCase(),
+      sessionSignerAddress: sessionSigner,
       budgetCap: data.budgetCap,
       budgetSpent: "0",
       grantMethod: data.grantMethod ?? null,
       feeAllowanceApproved: data.feeAllowanceApproved ?? false,
       expiry: data.expiry,
-      createdAt: new Date(),
+      createdAt: now,
+    })
+    .onConflictDoUpdate({
+      target: permissionsRegistry.userAddress,
+      set: {
+        permissionContext: data.permissionContext,
+        delegationHash: data.delegationHash,
+        sessionSignerAddress: sessionSigner,
+        budgetCap: data.budgetCap,
+        budgetSpent: "0",
+        grantMethod: data.grantMethod ?? null,
+        feeAllowanceApproved: data.feeAllowanceApproved ?? false,
+        expiry: data.expiry,
+        revokedAt: null,
+        createdAt: now,
+      },
     })
     .returning();
-    
-  return inserted;
+
+  return permission;
 }
 
 export async function getActivePermission(userAddress: string) {

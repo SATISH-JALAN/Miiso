@@ -1,9 +1,20 @@
-import { Settings as SettingsIcon, Shield, ListPlus, CreditCard, User, AlertOctagon, Info } from 'lucide-react';
-import { useState } from 'react';
+import { Settings as SettingsIcon, Shield, ListPlus, CreditCard, User, AlertOctagon } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useWallet } from './WalletContext';
 import { usePermission } from './hooks/usePermission';
 import { useStore } from './store/index';
 import { putUserWhitelist } from './lib/api';
+
+const AGENT_ADDRESS = "0x6ED09F73cfe78555F950D3a325Aa38471fDF667d";
+
+function parsePermissionRecord(permissionContext: string | null): Record<string, unknown> | null {
+  if (!permissionContext) return null;
+  try {
+    return JSON.parse(permissionContext) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
 
 export function Settings() {
   const {
@@ -16,19 +27,38 @@ export function Settings() {
   } = useWallet();
 
   const [budget, setBudget] = useState(5);
-  const [whitelist, setWhitelist] = useState([
-    '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984', // Uniswap V3
-    '0x7d2768de32b0b80b7a3454c06bdac94a69ddc7a9'  // Aave V3
-  ]);
+  const [whitelist, setWhitelist] = useState<string[]>([]);
   const [newAddress, setNewAddress] = useState('');
   
   const [isUpdating, setIsUpdating] = useState(false);
   const [profileUpdating, setProfileUpdating] = useState<'safe' | 'balanced' | 'manual' | null>(null);
   const [isDisablingGuard, setIsDisablingGuard] = useState(false);
   const [isRenewing, setIsRenewing] = useState(false);
+  const [isSavingWhitelist, setIsSavingWhitelist] = useState(false);
 
-  const { grantPermission } = usePermission();
+  const { grantPermission, checkPermission } = usePermission();
   const permissionContext = useStore((s) => s.permissionContext);
+  const grantMethod = useStore((s) => s.grantMethod);
+
+  useEffect(() => {
+    if (!isConnected) return;
+    checkPermission();
+  }, [isConnected, checkPermission]);
+
+  useEffect(() => {
+    const perm = parsePermissionRecord(permissionContext);
+    if (!perm) return;
+
+    if (perm.budgetCap) {
+      const cap = parseFloat(String(perm.budgetCap)) / 1_000_000;
+      if (!Number.isNaN(cap)) {
+        setBudget(Math.max(1, Math.min(10, Math.round(cap))));
+      }
+    }
+    if (Array.isArray(perm.whitelistAddresses)) {
+      setWhitelist(perm.whitelistAddresses as string[]);
+    }
+  }, [permissionContext]);
 
   const handleDisableGuard = async () => {
     if (window.confirm("Are you sure you want to disable Miiso Protection Guard? This will revoke on-chain session authority and relayer protections.")) {
@@ -40,6 +70,19 @@ export function Settings() {
       } finally {
         setIsDisablingGuard(false);
       }
+    }
+  };
+
+  const handleSaveWhitelist = async (addresses: string[]) => {
+    if (!walletAddress) return;
+    setIsSavingWhitelist(true);
+    try {
+      await putUserWhitelist(walletAddress, addresses);
+    } catch (err) {
+      console.error("Failed to save whitelist:", err);
+      alert("Failed to save whitelist. Check console.");
+    } finally {
+      setIsSavingWhitelist(false);
     }
   };
 
@@ -82,18 +125,16 @@ export function Settings() {
 
   let expiryString = "N/A";
   let isExpired = false;
-  if (permissionContext) {
-    try {
-      const parsed = JSON.parse(permissionContext);
-      if (parsed.expiry) {
-        const expiryDate = new Date(typeof parsed.expiry === 'string' ? parsed.expiry : parsed.expiry * 1000);
-        expiryString = expiryDate.toLocaleString();
-        if (expiryDate.getTime() < Date.now()) {
-          isExpired = true;
-          expiryString += " (EXPIRED)";
-        }
-      }
-    } catch (e) { /* ignore */ }
+  const perm = parsePermissionRecord(permissionContext);
+  if (perm?.expiry) {
+    const expiryDate = new Date(
+      typeof perm.expiry === "string" ? perm.expiry : Number(perm.expiry) * 1000
+    );
+    expiryString = expiryDate.toLocaleString();
+    if (expiryDate.getTime() < Date.now()) {
+      isExpired = true;
+      expiryString += " (EXPIRED)";
+    }
   }
 
   if (!isConnected) {
@@ -201,12 +242,16 @@ export function Settings() {
                   <div className="bg-black p-3 rounded-lg border border-white/5 text-[#E1E0CC] truncate">{walletAddress}</div>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1 font-sans uppercase tracking-widest">Miiso Smart Account (ERC-7715)</label>
-                  <div className="bg-black p-3 rounded-lg border border-white/5 text-[#E1E0CC] truncate">0x6ED09F73cfe78555F950D3a325Aa38471fDF667d</div>
+                  <label className="block text-xs text-gray-500 mb-1 font-sans uppercase tracking-widest">Miiso Session Signer</label>
+                  <div className="bg-black p-3 rounded-lg border border-white/5 text-[#E1E0CC] truncate">
+                    {(perm?.sessionSignerAddress as string) || AGENT_ADDRESS}
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1 font-sans uppercase tracking-widest">Linked Alert Endpoint (Telegram)</label>
-                  <div className="bg-black p-3 rounded-lg border border-white/5 text-[#E1E0CC]">@miiso_security_bot</div>
+                  <label className="block text-xs text-gray-500 mb-1 font-sans uppercase tracking-widest">Grant Method</label>
+                  <div className="bg-black p-3 rounded-lg border border-white/5 text-[#E1E0CC]">
+                    {grantMethod ?? (perm?.grantMethod as string) ?? "Not granted"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -319,15 +364,18 @@ export function Settings() {
                   className="flex-1 bg-black p-3 rounded-lg border border-white/5 text-[#E1E0CC] font-mono text-sm placeholder-gray-600 focus:outline-none focus:border-[#19C978]/50 transition-colors" 
                 />
                 <button 
-                  onClick={() => {
-                    if (newAddress.length > 10) {
-                       setWhitelist([...whitelist, newAddress]);
-                       setNewAddress('');
+                  onClick={async () => {
+                    if (newAddress.length === 42 && newAddress.startsWith("0x")) {
+                      const next = [...whitelist, newAddress.toLowerCase()];
+                      setWhitelist(next);
+                      setNewAddress('');
+                      await handleSaveWhitelist(next);
                     }
                   }}
-                  className="bg-[#19C978] text-black px-4 rounded-lg text-sm font-semibold hover:bg-[#14a361] transition-colors"
+                  disabled={isSavingWhitelist}
+                  className="bg-[#19C978] text-black px-4 rounded-lg text-sm font-semibold hover:bg-[#14a361] transition-colors disabled:opacity-50"
                 >
-                  Add
+                  {isSavingWhitelist ? "Saving..." : "Add"}
                 </button>
               </div>
 
@@ -336,8 +384,13 @@ export function Settings() {
                   <div key={i} className="flex justify-between items-center bg-black p-3 rounded-lg border border-white/5 group">
                     <span className="font-mono text-xs text-[#E1E0CC]">{address}</span>
                     <button 
-                      onClick={() => setWhitelist(whitelist.filter((_, idx) => idx !== i))}
-                      className="text-gray-600 hover:text-red-500 transition-colors text-xs px-2"
+                      onClick={async () => {
+                        const next = whitelist.filter((_, idx) => idx !== i);
+                        setWhitelist(next);
+                        await handleSaveWhitelist(next);
+                      }}
+                      disabled={isSavingWhitelist}
+                      className="text-gray-600 hover:text-red-500 transition-colors text-xs px-2 disabled:opacity-50"
                     >
                       Remove
                     </button>

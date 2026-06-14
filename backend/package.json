@@ -10,7 +10,9 @@
     "start": "node dist/index.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:seed": "tsx scripts/db-seed.ts"
+    "db:seed": "tsx scripts/db-seed.ts",
+    "sprint1:verify": "tsx scripts/sprint1-verify.ts",
+    "sprint1:e2e": "tsx scripts/sprint1-e2e.ts"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",

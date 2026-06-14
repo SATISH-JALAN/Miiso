@@ -69,7 +69,12 @@ export function usePermission() {
         whitelistAddresses,
       });
 
-      setPermission(permissionContext);
+      const saved = await getPermissions(userAddress);
+      if (saved.success && saved.permission) {
+        setPermission(JSON.stringify(saved.permission));
+      } else {
+        setPermission(permissionContext);
+      }
       const methodLabel =
         method === "erc7715"
           ? "Advanced Permission (ERC-7715)"

@@ -10,13 +10,12 @@ import { useStore } from './store/index';
 
 export function Setup() {
   const { walletAddress, isConnected, connectWallet, refreshAllData } = useWallet();
-  const { upgradeToSmartAccount, grantPermission, approveSuccessFee, checkIsSmartAccount } = usePermission();
+  const { upgradeToSmartAccount, grantPermission, approveSuccessFee, checkIsSmartAccount, checkPermission } = usePermission();
   const setSetupComplete = useStore((s) => s.setSetupComplete);
   const setFlaskSupported = useStore((s) => s.setFlaskSupported);
   const setGrantMethod = useStore((s) => s.setGrantMethod);
   const flaskSupported = useStore((s) => s.flaskSupported);
   const storeGrantMethod = useStore((s) => s.grantMethod);
-  const setupComplete = useStore((s) => s.setupComplete);
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
@@ -33,6 +32,11 @@ export function Setup() {
   const [upgradeMethod, setUpgradeMethod] = useState<string | null>(null);
   const [estimatedRelayFee, setEstimatedRelayFee] = useState<number>(0.01);
   const [nativeGrantAvailable, setNativeGrantAvailable] = useState<boolean | null>(null);
+  const [setupInitialized, setSetupInitialized] = useState(false);
+
+  const feeHookConfigured = Boolean(
+    SUCCESS_FEE_HOOK && SUCCESS_FEE_HOOK !== "0x0000000000000000000000000000000000000000"
+  );
 
   const durationOptions = [
     { days: 7, label: '7 days' },
@@ -41,48 +45,75 @@ export function Setup() {
     { days: 365, label: '1 year' },
   ];
 
-  // On wallet connect: check Flask support, then smart account status
+  // Restore wizard step from backend permission state (avoids resetting to "Grant Permission" on revisit)
   useEffect(() => {
-    async function checkWalletStatus() {
-      if (isConnected && step === 1) {
-        setLoading(true);
-        setError(null);
-        try {
-          // 1. Check Flask/ERC-7715 support
-          const flaskResult = await checkFlaskSupport(walletAddress ?? undefined);
-          setFlaskSupported(flaskResult.supported);
+    if (!isConnected || setupInitialized) return;
 
-          if (!flaskResult.supported) {
-            // Stay on step 1 but show Flask requirement
-            setStep(1);
-            setLoading(false);
-            return;
+    let cancelled = false;
+
+    async function initializeSetup() {
+      setLoading(true);
+      setError(null);
+      try {
+        const perm = await checkPermission();
+        if (cancelled) return;
+
+        if (perm) {
+          if (perm.budgetCap) {
+            const cap = parseFloat(String(perm.budgetCap)) / 1_000_000;
+            if (!Number.isNaN(cap)) {
+              setBudgetCap(Math.max(1, Math.min(10, Math.round(cap))));
+            }
+          }
+          if (Array.isArray(perm.whitelistAddresses)) {
+            setWhitelist(perm.whitelistAddresses as string[]);
           }
 
-          // 2. Check smart account status
-          const isSmart = await checkIsSmartAccount();
-          if (isSmart) {
-            setStep(3); // Skip upgrade, go to permission
-          } else {
-            setStep(2); // Need upgrade
+          const needFeeStep = feeHookConfigured && !perm.feeAllowanceApproved;
+          setStep(needFeeStep ? 4 : 5);
+          if (!needFeeStep) {
+            setSetupComplete(true);
           }
-        } catch (err) {
-          console.error("Failed to check wallet status:", err);
-          setStep(2);
-        } finally {
+          return;
+        }
+
+        const flaskResult = await checkFlaskSupport(walletAddress ?? undefined);
+        if (cancelled) return;
+        setFlaskSupported(flaskResult.supported);
+
+        if (!flaskResult.supported) {
+          setStep(1);
+          return;
+        }
+
+        const isSmart = await checkIsSmartAccount();
+        if (cancelled) return;
+        setStep(isSmart ? 3 : 2);
+      } catch (err) {
+        console.error("Failed to initialize setup:", err);
+        if (!cancelled) setStep(2);
+      } finally {
+        if (!cancelled) {
           setLoading(false);
+          setSetupInitialized(true);
         }
       }
     }
-    checkWalletStatus();
-  }, [isConnected, step]);
 
-  // If setup was already completed, redirect to dashboard
-  useEffect(() => {
-    if (setupComplete && isConnected) {
-      setStep(5);
-    }
-  }, [setupComplete, isConnected]);
+    initializeSetup();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isConnected,
+    setupInitialized,
+    walletAddress,
+    checkPermission,
+    checkIsSmartAccount,
+    setFlaskSupported,
+    setSetupComplete,
+    feeHookConfigured,
+  ]);
 
   // Pre-fetch 1Shot relay fee for upgrade step
   useEffect(() => {
@@ -205,9 +236,6 @@ export function Setup() {
   };
 
   const displayGrantMethod = localGrantMethod ?? storeGrantMethod;
-  const feeHookConfigured = Boolean(
-    SUCCESS_FEE_HOOK && SUCCESS_FEE_HOOK !== "0x0000000000000000000000000000000000000000"
-  );
 
   const formatAddr = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
 
