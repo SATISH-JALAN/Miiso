@@ -17,6 +17,19 @@ const sslConfig = isLocal ? false : { rejectUnauthorized: false };
 export const pool = new pg.Pool({
   connectionString: databaseUrl,
   ssl: sslConfig,
+  // Keep connections alive so Neon doesn't terminate them mid-query
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10_000,
+  // Drop idle connections before Neon's server-side timeout kicks in
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000,
+  max: 10,
+});
+
+// Prevent unhandled 'error' events from crashing the process.
+// Neon terminates idle connections server-side; this catches those disconnects gracefully.
+pool.on("error", (err) => {
+  console.error("⚠️ [DB Pool] Unexpected connection error (will reconnect on next query):", err.message);
 });
 
 export const db = drizzle(pool);

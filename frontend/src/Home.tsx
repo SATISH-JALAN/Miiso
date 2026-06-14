@@ -10,6 +10,9 @@ export function Home() {
     <div className="w-full">
       <Hero />
 
+      {/* Smooth fade from dark video into content */}
+      <div className="w-full h-32 md:h-48 bg-gradient-to-b from-black via-[#080808] to-[#111111]" />
+
       <About />
       <Features />
       <HowItWorks />
