@@ -9,7 +9,7 @@ const BASE_SEPOLIA_CHAIN_HEX = "0x14a34";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 const ONESHOT_RELAYER_URL =
-  import.meta.env.VITE_ONESHOT_RELAYER_URL || "https://relayer.1shotapi.com/rpc";
+  import.meta.env.VITE_ONESHOT_RELAYER_URL || "https://relayer.1shotapi.dev/relayers";
 const USDC_ADDRESS = (import.meta.env.VITE_USDC_ADDRESS ||
   "0x036CbD53842c5426634e7929541eC2318f3dCF7e") as `0x${string}`;
 const SUCCESS_FEE_HOOK = (import.meta.env.VITE_SUCCESS_FEE_HOOK || "") as `0x${string}`;
