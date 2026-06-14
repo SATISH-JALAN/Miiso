@@ -10,13 +10,13 @@ interface EmptyStateProps {
 export function DashboardEmptyState({ icon, title, description, hint }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center text-center px-6 py-10 min-h-[220px]">
-      <div className="w-11 h-11 rounded-2xl bg-white/4 border border-white/10 flex items-center justify-center text-[#19C978] mb-4">
+      <div className="w-11 h-11 rounded-2xl bg-white/4 border border-white/10 flex items-center justify-center text-[#B8CFA8] mb-4">
         {icon}
       </div>
       <p className="text-[#E1E0CC] font-medium text-sm mb-1.5">{title}</p>
       <p className="text-gray-500 text-xs leading-relaxed max-w-sm">{description}</p>
       {hint && (
-        <p className="text-[#19C978]/80 text-[11px] font-mono mt-3 px-3 py-1.5 rounded-full bg-[#19C978]/5 border border-[#19C978]/15">
+        <p className="text-[#B8CFA8]/80 text-[11px] font-mono mt-3 px-3 py-1.5 rounded-full bg-[#B8CFA8]/5 border border-[#B8CFA8]/15">
           {hint}
         </p>
       )}
@@ -63,7 +63,7 @@ export function SystemPulseBar({ setupComplete, isReadOnly, walletAddress }: Sys
         >
           <div
             className={`w-2 h-2 rounded-full shrink-0 ${
-              item.ok ? "bg-[#19C978] animate-pulse" : "bg-gray-600"
+              item.ok ? "bg-[#B8CFA8] animate-pulse" : "bg-gray-600"
             }`}
           />
           <div className="min-w-0">
@@ -76,7 +76,7 @@ export function SystemPulseBar({ setupComplete, isReadOnly, walletAddress }: Sys
       ))}
       {walletAddress && (
         <div className="col-span-2 lg:col-span-4 bg-[#0B0B0C] border border-white/5 rounded-xl px-4 py-2.5 font-mono text-[11px] text-gray-500 overflow-x-auto whitespace-nowrap">
-          <span className="text-[#19C978]">●</span>{" "}
+          <span className="text-[#B8CFA8]">●</span>{" "}
           Monitoring wallet {walletAddress.slice(0, 6)}…{walletAddress.slice(-4)} · awaiting approval events
         </div>
       )}
@@ -116,7 +116,7 @@ export function LiveFeedIdlePanel({ setupComplete }: LiveFeedIdleProps) {
         </div>
       ))}
       {setupComplete && (
-        <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2 text-[#19C978]/70">
+        <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2 text-[#B8CFA8]/70">
           <Radio className="w-3 h-3 animate-pulse" />
           <span>Live feed populates when approvals or threats are detected</span>
         </div>
@@ -148,10 +148,10 @@ export function DemoReadyPanel({ show }: DemoReadyPanelProps) {
   if (!show) return null;
 
   return (
-    <div className="bg-linear-to-br from-[#19C978]/[0.07] to-transparent border border-[#19C978]/20 rounded-2xl p-6">
+    <div className="bg-linear-to-br from-[#B8CFA8]/[0.07] to-transparent border border-[#B8CFA8]/20 rounded-2xl p-6">
       <div className="flex items-start gap-3 mb-5">
-        <div className="w-9 h-9 rounded-xl bg-[#19C978]/10 flex items-center justify-center shrink-0">
-          <Zap className="w-4 h-4 text-[#19C978]" />
+        <div className="w-9 h-9 rounded-xl bg-[#B8CFA8]/10 flex items-center justify-center shrink-0">
+          <Zap className="w-4 h-4 text-[#B8CFA8]" />
         </div>
         <div>
           <h3 className="text-[#E1E0CC] font-medium text-sm">Ready for demo — system armed, no activity yet</h3>
@@ -163,7 +163,7 @@ export function DemoReadyPanel({ show }: DemoReadyPanelProps) {
       <ol className="space-y-3">
         {DEMO_STEPS.map((step, i) => (
           <li key={i} className="flex gap-3 items-start">
-            <span className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-mono text-[#19C978] shrink-0">
+            <span className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-mono text-[#B8CFA8] shrink-0">
               {i + 1}
             </span>
             <div>
@@ -189,7 +189,7 @@ export function StatCard({ label, value, subtext, accent }: StatCardProps) {
     <div className="bg-[#101010] p-5 rounded-2xl border border-white/5 flex flex-col justify-between min-h-[108px]">
       <span className="text-gray-500 text-[10px] tracking-widest uppercase">{label}</span>
       <div>
-        <span className={`text-2xl sm:text-3xl font-medium tracking-tight ${accent ? "text-[#19C978]" : "text-[#E1E0CC]"}`}>
+        <span className={`text-2xl sm:text-3xl font-medium tracking-tight ${accent ? "text-[#B8CFA8]" : "text-[#E1E0CC]"}`}>
           {value}
         </span>
         {subtext && <p className="text-gray-600 text-[11px] mt-1">{subtext}</p>}

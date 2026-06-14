@@ -110,8 +110,8 @@ export function Features() {
                
                <ul className="space-y-4">
                   <li className="flex gap-3 items-start"><Check className="w-5 h-5 text-primary shrink-0" /><span className="text-gray-400 text-sm">Can revoke approvals</span></li>
-                  <li className="flex gap-3 items-start"><span className="w-5 h-5 flex items-center justify-center text-red-500/80 shrink-0 font-bold opacity-70">✗</span><span className="text-gray-400 text-sm">Cannot transfer funds</span></li>
-                  <li className="flex gap-3 items-start"><span className="w-5 h-5 flex items-center justify-center text-red-500/80 shrink-0 font-bold opacity-70">✗</span><span className="text-gray-400 text-sm">Cannot swap tokens</span></li>
+                  <li className="flex gap-3 items-start"><span className="w-5 h-5 flex items-center justify-center text-[#C27A73]/80 shrink-0 font-bold opacity-70">✗</span><span className="text-gray-400 text-sm">Cannot transfer funds</span></li>
+                  <li className="flex gap-3 items-start"><span className="w-5 h-5 flex items-center justify-center text-[#C27A73]/80 shrink-0 font-bold opacity-70">✗</span><span className="text-gray-400 text-sm">Cannot swap tokens</span></li>
                </ul>
              </div>
 

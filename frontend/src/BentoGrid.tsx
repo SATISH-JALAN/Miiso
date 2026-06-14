@@ -99,7 +99,7 @@ export function BentoGrid() {
     >
       <div className="container-content">
         <div className="mb-16 text-center md:text-left">
-          <span className="font-mono text-[11px] text-[#19C978] uppercase tracking-widest font-bold block mb-4">
+          <span className="font-mono text-[11px] text-[#B8CFA8] uppercase tracking-widest font-bold block mb-4">
             Why Miiso
           </span>
           <h2 className="text-[44px] font-bold text-text-primary leading-[1.1] tracking-tight">
@@ -173,7 +173,7 @@ export function BentoGrid() {
               <div className="w-12 h-12 bg-brand-accent/20 rounded-xl flex items-center justify-center border border-brand-accent/30 text-brand-accent font-bold">
                 V
               </div>
-              <div className="bg-[#19C978]/10 text-[#19C978] px-3 py-1 rounded-full font-mono text-xs font-bold border border-[#19C978]/20">
+              <div className="bg-[#B8CFA8]/10 text-[#B8CFA8] px-3 py-1 rounded-full font-mono text-xs font-bold border border-[#B8CFA8]/20">
                 97.4% confidence
               </div>
             </div>
@@ -197,10 +197,10 @@ export function BentoGrid() {
               <div className="bg-[#10B981]/10 text-[#10B981] px-4 py-2 rounded-lg font-mono text-xs font-bold border border-[#10B981]/20 w-fit shrink-0 tracking-widest">
                 ✓ revoke
               </div>
-              <div className="bg-[#EF4444]/10 text-[#EF4444] px-4 py-2 rounded-lg font-mono text-xs font-bold border border-[#EF4444]/20 w-fit shrink-0 tracking-widest">
+              <div className="bg-[#C27A73]/10 text-[#C27A73] px-4 py-2 rounded-lg font-mono text-xs font-bold border border-[#C27A73]/20 w-fit shrink-0 tracking-widest">
                 ✗ transfer
               </div>
-              <div className="bg-[#EF4444]/10 text-[#EF4444] px-4 py-2 rounded-lg font-mono text-xs font-bold border border-[#EF4444]/20 w-fit shrink-0 tracking-widest">
+              <div className="bg-[#C27A73]/10 text-[#C27A73] px-4 py-2 rounded-lg font-mono text-xs font-bold border border-[#C27A73]/20 w-fit shrink-0 tracking-widest">
                 ✗ swap
               </div>
             </div>

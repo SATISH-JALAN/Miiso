@@ -47,7 +47,7 @@ export function StickyScroll() {
               });
               // Activate current
               gsap.to(dotsRef.current[index], {
-                backgroundColor: "#19C978",
+                backgroundColor: "#B8CFA8",
                 duration: 0.3,
               });
             }
@@ -93,7 +93,7 @@ export function StickyScroll() {
             className="md:sticky md:top-30 md:w-1/3 shrink-0 py-12"
           >
             <div className="mb-4">
-              <span className="font-mono text-[11px] text-[#19C978] uppercase tracking-widest font-bold">
+              <span className="font-mono text-[11px] text-[#B8CFA8] uppercase tracking-widest font-bold">
                 How it works
               </span>
             </div>
@@ -108,7 +108,7 @@ export function StickyScroll() {
                     ref={(el) => {
                       dotsRef.current[i] = el;
                     }}
-                    className={`w-3 h-3 rounded-full transition-colors duration-300 ${i === 0 ? "bg-[#19C978]" : "bg-brand-border"}`}
+                    className={`w-3 h-3 rounded-full transition-colors duration-300 ${i === 0 ? "bg-[#B8CFA8]" : "bg-brand-border"}`}
                   />
                   {i < 3 && (
                     <div className="w-px h-10 bg-brand-border my-2" />
@@ -138,7 +138,7 @@ export function StickyScroll() {
                   <div className="h-10 bg-brand-bg rounded-lg border border-brand-border w-full flex items-center px-4 justify-center font-mono text-sm text-text-muted">
                     Signature request
                   </div>
-                  <div className="h-10 bg-[#19C978] text-[#0A0A0A] rounded-lg w-full flex items-center justify-center font-bold shadow-[0_0_15px_var(--color-accent-glow)]">
+                  <div className="h-10 bg-[#B8CFA8] text-[#0A0A0A] rounded-lg w-full flex items-center justify-center font-bold shadow-[0_0_15px_var(--color-accent-glow)]">
                     Sign
                   </div>
                 </div>
@@ -159,21 +159,21 @@ export function StickyScroll() {
               }}
               className="h-[80vh] min-h-125 flex flex-col justify-center gap-8"
             >
-              <div className="bg-brand-surface border border-[#19C978]/30 rounded-2xl p-8 max-w-sm w-full mx-auto md:mx-0 shadow-[0_0_40px_rgba(25,201,120,0.08)]">
-                <h4 className="font-mono text-xs text-[#19C978] mb-4">
+              <div className="bg-brand-surface border border-[#B8CFA8]/30 rounded-2xl p-8 max-w-sm w-full mx-auto md:mx-0 shadow-[0_0_40px_rgba(25,201,120,0.08)]">
+                <h4 className="font-mono text-xs text-[#B8CFA8] mb-4">
                   ERC-7715 PERMISSION
                 </h4>
                 <ul className="space-y-3 font-mono text-[13px]">
                   <li className="flex items-center gap-2 text-[#10B981]">
                     <span className="w-4">✓</span> Can revoke approvals
                   </li>
-                  <li className="flex items-center gap-2 text-[#EF4444]">
+                  <li className="flex items-center gap-2 text-[#C27A73]">
                     <span className="w-4">✗</span> Cannot transfer funds
                   </li>
-                  <li className="flex items-center gap-2 text-[#EF4444]">
+                  <li className="flex items-center gap-2 text-[#C27A73]">
                     <span className="w-4">✗</span> Cannot swap tokens
                   </li>
-                  <li className="flex items-center gap-2 text-[#EF4444]">
+                  <li className="flex items-center gap-2 text-[#C27A73]">
                     <span className="w-4">✗</span> Cannot touch your balance
                   </li>
                 </ul>
@@ -201,7 +201,7 @@ export function StickyScroll() {
                 className="bg-[#0A0A0A] border border-brand-border rounded-xl p-6 max-w-sm w-full mx-auto md:mx-0 font-mono text-[12px] leading-loose shadow-xl"
               >
                 <div className="flex gap-2 mb-4">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#EF4444]/80"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#C27A73]/80"></div>
                   <div className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]/80"></div>
                   <div className="w-2.5 h-2.5 rounded-full bg-[#10B981]/80"></div>
                 </div>

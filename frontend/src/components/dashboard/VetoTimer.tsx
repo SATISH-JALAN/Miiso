@@ -54,16 +54,16 @@ export function VetoTimer({ action, onVeto, isVetoing, onExecuteVeto, isExecutin
       className="relative overflow-hidden bg-gradient-to-br from-[#1c0d0d] to-[#0f0707] border border-red-500/20 p-6 rounded-2xl shadow-xl flex items-center justify-between gap-6"
     >
       {/* Background threat pulse */}
-      <div className="absolute inset-0 bg-red-500/2 animate-pulse pointer-events-none" />
+      <div className="absolute inset-0 bg-[#C27A73]/2 animate-pulse pointer-events-none" />
 
       <div className="flex items-center gap-4 z-10">
-        <div className="p-3 bg-red-500/10 rounded-xl border border-red-500/25 flex items-center justify-center">
-          <ShieldAlert className="w-6 h-6 text-red-500 animate-bounce" />
+        <div className="p-3 bg-[#C27A73]/10 rounded-xl border border-red-500/25 flex items-center justify-center">
+          <ShieldAlert className="w-6 h-6 text-[#C27A73] animate-bounce" />
         </div>
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-red-500 font-bold text-xs uppercase tracking-widest font-mono">Tier 2 Threat Staged</span>
-            <span className="bg-red-500/20 text-red-400 text-[10px] px-2 py-0.5 rounded-full font-mono font-medium">Veto Window Active</span>
+            <span className="text-[#C27A73] font-bold text-xs uppercase tracking-widest font-mono">Tier 2 Threat Staged</span>
+            <span className="bg-[#C27A73]/20 text-[#C27A73] text-[10px] px-2 py-0.5 rounded-full font-mono font-medium">Veto Window Active</span>
           </div>
           <h4 className="text-[#E1E0CC] font-medium text-sm leading-none mb-2">
             Target Token: <span className="font-mono text-gray-300 font-bold">{formatAddress(action.tokenAddress)}</span>
@@ -115,7 +115,7 @@ export function VetoTimer({ action, onVeto, isVetoing, onExecuteVeto, isExecutin
         <button
           onClick={() => onVeto(action.id)}
           disabled={isVetoing || isExecuting}
-          className="bg-red-600 hover:bg-red-500 text-white font-mono text-xs px-4 py-2.5 rounded-xl border border-red-400/30 flex items-center gap-2 transition-all shadow-lg hover:shadow-red-500/10 active:scale-95 disabled:opacity-50"
+          className="bg-red-600 hover:bg-[#C27A73] text-white font-mono text-xs px-4 py-2.5 rounded-xl border border-red-400/30 flex items-center gap-2 transition-all shadow-lg hover:shadow-red-500/10 active:scale-95 disabled:opacity-50"
         >
           {isVetoing ? (
             <span className="flex items-center gap-1.5">

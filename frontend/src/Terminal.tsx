@@ -106,7 +106,7 @@ export function Terminal() {
       className="section-padding bg-brand-bg relative z-10 border-t border-brand-border"
     >
       <div className="container-content text-center mb-16">
-        <span className="font-mono text-[11px] text-[#19C978] uppercase tracking-widest font-bold block mb-4">
+        <span className="font-mono text-[11px] text-[#B8CFA8] uppercase tracking-widest font-bold block mb-4">
           See it happen
         </span>
         <h2 className="text-[44px] font-bold text-text-primary leading-[1.1] tracking-tight whitespace-pre-line">
@@ -119,7 +119,7 @@ export function Terminal() {
           {/* Top Bar */}
           <div className="bg-[#0F0F0F] border-b border-brand-border flex items-center px-4 h-10 relative">
             <div className="flex gap-2 absolute left-4">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#EF4444]" />
+              <div className="w-2.5 h-2.5 rounded-full bg-[#C27A73]" />
               <div className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
               <div className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
             </div>
@@ -136,7 +136,7 @@ export function Terminal() {
             {scans.length === 0 ? (
               <div className="flex items-center justify-center h-[240px]">
                 <div className="text-center">
-                  <div className="w-4 h-4 border-2 border-t-transparent border-[#19C978] rounded-full animate-spin mx-auto mb-3" />
+                  <div className="w-4 h-4 border-2 border-t-transparent border-[#B8CFA8] rounded-full animate-spin mx-auto mb-3" />
                   <p className="text-[#3F3F46] text-sm">
                     {connected ? "Waiting for next Base block..." : "Connecting to Base network..."}
                   </p>

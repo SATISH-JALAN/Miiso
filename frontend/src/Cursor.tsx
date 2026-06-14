@@ -51,7 +51,7 @@ export function Cursor() {
     const handleMouseEnter = () => {
       gsap.to(ring, {
         scale: 2.2,
-        borderColor: "#19C978",
+        borderColor: "#B8CFA8",
         duration: 0.3,
         ease: "power2.out",
       });

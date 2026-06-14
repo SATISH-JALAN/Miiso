@@ -79,10 +79,10 @@ export function HorizontalScroll() {
           <div>
             <div className="flex items-center gap-4 mb-6">
               <div className="relative w-4 h-4 flex items-center justify-center">
-                <div className="absolute w-full h-full bg-[#EF4444] rounded-full animate-ping opacity-75"></div>
-                <div className="relative w-2 h-2 bg-[#EF4444] rounded-full"></div>
+                <div className="absolute w-full h-full bg-[#C27A73] rounded-full animate-ping opacity-75"></div>
+                <div className="relative w-2 h-2 bg-[#C27A73] rounded-full"></div>
               </div>
-              <span className="font-mono text-[12px] text-[#EF4444]">
+              <span className="font-mono text-[12px] text-[#C27A73]">
                 03:17:08 AM
               </span>
             </div>
@@ -109,10 +109,10 @@ export function HorizontalScroll() {
           <div>
             <div className="flex items-center gap-4 mb-6">
               <div className="relative w-4 h-4 flex items-center justify-center">
-                <div className="absolute w-full h-full border border-[#19C978] rounded-full animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
-                <div className="relative w-2 h-2 bg-[#19C978] rounded-full"></div>
+                <div className="absolute w-full h-full border border-[#B8CFA8] rounded-full animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+                <div className="relative w-2 h-2 bg-[#B8CFA8] rounded-full"></div>
               </div>
-              <span className="font-mono text-[12px] text-[#19C978]">
+              <span className="font-mono text-[12px] text-[#B8CFA8]">
                 03:17:09 AM
               </span>
             </div>
@@ -124,7 +124,7 @@ export function HorizontalScroll() {
               exploit signature.
             </p>
             <div className="w-full h-1.5 bg-brand-bg rounded-full overflow-hidden">
-              <div className="h-full bg-[#19C978] w-[97.4%] rounded-full shadow-[0_0_10px_var(--color-accent-glow)]"></div>
+              <div className="h-full bg-[#B8CFA8] w-[97.4%] rounded-full shadow-[0_0_10px_var(--color-accent-glow)]"></div>
             </div>
           </div>
           <div className="font-mono text-[12px] text-text-muted mt-auto pt-4 border-t border-brand-border">
@@ -183,7 +183,7 @@ export function HorizontalScroll() {
         >
           {/* Split background */}
           <div className="absolute inset-0 z-0 flex">
-            <div className="w-1/2 h-full bg-[#EF4444]/5"></div>
+            <div className="w-1/2 h-full bg-[#C27A73]/5"></div>
             <div className="w-1/2 h-full bg-[#10B981]/5"></div>
           </div>
 

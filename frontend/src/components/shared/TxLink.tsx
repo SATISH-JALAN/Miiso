@@ -28,7 +28,7 @@ export function TxLink({ txHash, label, className = '' }: TxLinkProps) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`inline-flex items-center gap-1 font-mono text-xs text-[#19C978] hover:text-white transition-colors underline decoration-[#19C978]/30 hover:decoration-white/50 ${className}`}
+      className={`inline-flex items-center gap-1 font-mono text-xs text-[#B8CFA8] hover:text-white transition-colors underline decoration-[#B8CFA8]/30 hover:decoration-white/50 ${className}`}
       title={txHash}
     >
       {label ?? shortHash(txHash)}
