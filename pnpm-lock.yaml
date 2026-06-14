@@ -5,9 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 importers:
-
   .: {}
-
   backend:
     dependencies:
       '@fastify/cors':
