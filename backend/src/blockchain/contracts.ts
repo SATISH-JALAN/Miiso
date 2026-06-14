@@ -13,8 +13,8 @@ export const VENICE_VAULT = "0xbaa13a4b5df53a1cf6038015f9e7c58afd2aa22e" as cons
 export const APPROVAL_REVOCATION_ENFORCER = (process.env.APPROVAL_REVOCATION_ENFORCER || 
   "0xe264F1f09A19505a1ca1a86D5b01E8bFdb64324A") as `0x${string}`;
 
-export const DELEGATION_MANAGER_ADDRESS = (process.env.DELEGATION_MANAGER_ADDRESS || 
-  "0x0000000000000000000000000000000000000000") as `0x${string}`; // Fallback placeholder if not set
+export const DELEGATION_MANAGER_ADDRESS = (process.env.DELEGATION_MANAGER_ADDRESS ||
+  "0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3") as `0x${string}`;
 
 // Function Selector Constants
 export const APPROVE_SELECTOR = "0x095ea7b3" as const; // approve(address,uint256)

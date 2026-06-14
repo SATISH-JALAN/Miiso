@@ -6,6 +6,8 @@ coverage/
 docs/
 dist/
 docs/
+.env
+**/.env
 !.env.example
 backend/.honeypot-address
 
