@@ -10,7 +10,7 @@ interface EmptyStateProps {
 export function DashboardEmptyState({ icon, title, description, hint }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center text-center px-6 py-10 min-h-[220px]">
-      <div className="w-11 h-11 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-[#19C978] mb-4">
+      <div className="w-11 h-11 rounded-2xl bg-white/4 border border-white/10 flex items-center justify-center text-[#19C978] mb-4">
         {icon}
       </div>
       <p className="text-[#E1E0CC] font-medium text-sm mb-1.5">{title}</p>
@@ -148,7 +148,7 @@ export function DemoReadyPanel({ show }: DemoReadyPanelProps) {
   if (!show) return null;
 
   return (
-    <div className="bg-gradient-to-br from-[#19C978]/[0.07] to-transparent border border-[#19C978]/20 rounded-2xl p-6">
+    <div className="bg-linear-to-br from-[#19C978]/[0.07] to-transparent border border-[#19C978]/20 rounded-2xl p-6">
       <div className="flex items-start gap-3 mb-5">
         <div className="w-9 h-9 rounded-xl bg-[#19C978]/10 flex items-center justify-center shrink-0">
           <Zap className="w-4 h-4 text-[#19C978]" />
