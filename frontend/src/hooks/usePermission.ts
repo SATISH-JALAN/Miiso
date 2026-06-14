@@ -33,20 +33,21 @@ export function usePermission() {
     return null;
   }, [userAddress, setPermission]);
 
-  const grantPermission = useCallback(async (budgetCap: number, whitelistAddresses: string[] = []) => {
+  const grantPermission = useCallback(async (budgetCap: number, whitelistAddresses: string[] = [], durationDays: number = 30) => {
     if (!userAddress) throw new Error("Wallet not connected");
 
     // 1. Request ERC-7715 permission via MetaMask Flask (no fallback)
-    const { permissionContext, delegationHash, method } = await requestPermissionGrant(userAddress, budgetCap);
+    const { permissionContext, delegationHash, method } = await requestPermissionGrant(userAddress, budgetCap, durationDays);
 
     // 2. Register permission with backend
+    const durationSeconds = durationDays * 24 * 60 * 60;
     await postPermissions({
       userAddress,
       permissionContext,
       delegationHash,
       sessionSignerAddress: AGENT_ADDRESS,
       budgetCap: (budgetCap * 1e18).toString(),
-      expiry: Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60, // 1 year
+      expiry: Math.floor(Date.now() / 1000) + durationSeconds,
     });
 
     setPermission(permissionContext);
