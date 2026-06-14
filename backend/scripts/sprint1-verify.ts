@@ -101,7 +101,6 @@ function verifyPhase1() {
     warn("P1", "Worker thread pool");
   }
 
-  const wp = readSrc("src/daemon/workerPool.ts");
   if (wp.includes("30000") || wp.includes("SIGKILL")) {
     pass("P1", "30s task timeout on Heimdall worker pool");
   } else {
