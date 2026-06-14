@@ -46,6 +46,11 @@ export interface ExecutorOutput {
 export interface OrchestratorDecision {
   contractAddress: string;
   combinedConfidence: number;
+  veniceConfidence: number;
+  veniceVulnerable: boolean;
+  staticRisk: "high" | "medium" | "low";
+  staticFlags: string[];
+  recommendation: string | null;
   agentResults: AgentResult[];
   tier: TierLevel;
   totalCostUsdc: number;

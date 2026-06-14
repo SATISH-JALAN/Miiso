@@ -19,7 +19,9 @@ export function useDashboard() {
         getHistory(userAddress),
       ]);
 
-      if (dbStats && (dbStats as any).success !== false) {
+      if (dbStats?.stats) {
+        setStats(dbStats.stats as unknown as DashboardStats);
+      } else if (dbStats && (dbStats as any).success !== false && !(dbStats as any).stats) {
         setStats(dbStats as unknown as DashboardStats);
       }
       

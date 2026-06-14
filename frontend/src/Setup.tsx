@@ -4,15 +4,18 @@ import { Shield, ArrowRight, CheckCircle, Wallet, Loader2, Plus, Trash2, AlertTr
 import { Link, useNavigate } from 'react-router-dom';
 import { useWallet } from './WalletContext';
 import { usePermission } from './hooks/usePermission';
-import { checkFlaskSupport } from './lib/metamask';
+import { checkFlaskSupport, supportsNativeGrantPermissions, getRelayCapabilities, SUCCESS_FEE_HOOK } from './lib/metamask';
+import { postFeeAllowance } from './lib/api';
 import { useStore } from './store/index';
 
 export function Setup() {
   const { walletAddress, isConnected, connectWallet, refreshAllData } = useWallet();
-  const { upgradeToSmartAccount, grantPermission, checkIsSmartAccount } = usePermission();
+  const { upgradeToSmartAccount, grantPermission, approveSuccessFee, checkIsSmartAccount } = usePermission();
   const setSetupComplete = useStore((s) => s.setSetupComplete);
   const setFlaskSupported = useStore((s) => s.setFlaskSupported);
+  const setGrantMethod = useStore((s) => s.setGrantMethod);
   const flaskSupported = useStore((s) => s.flaskSupported);
+  const storeGrantMethod = useStore((s) => s.grantMethod);
   const setupComplete = useStore((s) => s.setupComplete);
   const navigate = useNavigate();
 
@@ -25,6 +28,11 @@ export function Setup() {
   const [durationDays, setDurationDays] = useState(30);
   const [whitelist, setWhitelist] = useState<string[]>([]);
   const [newWhitelistAddress, setNewWhitelistAddress] = useState('');
+  const [localGrantMethod, setLocalGrantMethod] = useState<string | null>(null);
+  const [upgradeFee, setUpgradeFee] = useState<number | null>(null);
+  const [upgradeMethod, setUpgradeMethod] = useState<string | null>(null);
+  const [estimatedRelayFee, setEstimatedRelayFee] = useState<number>(0.01);
+  const [nativeGrantAvailable, setNativeGrantAvailable] = useState<boolean | null>(null);
 
   const durationOptions = [
     { days: 7, label: '7 days' },
@@ -72,10 +80,27 @@ export function Setup() {
   // If setup was already completed, redirect to dashboard
   useEffect(() => {
     if (setupComplete && isConnected) {
-      // Allow them to view setup page but show completion state
-      setStep(4);
+      setStep(5);
     }
   }, [setupComplete, isConnected]);
+
+  // Pre-fetch 1Shot relay fee for upgrade step
+  useEffect(() => {
+    if (step === 2) {
+      getRelayCapabilities()
+        .then((caps) => setEstimatedRelayFee(caps.feeUsdc))
+        .catch(() => setEstimatedRelayFee(0.01));
+    }
+  }, [step]);
+
+  // Check if native ERC-7715 grant is available for step 3 copy
+  useEffect(() => {
+    if (step === 3 && walletAddress) {
+      supportsNativeGrantPermissions(walletAddress)
+        .then(setNativeGrantAvailable)
+        .catch(() => setNativeGrantAvailable(false));
+    }
+  }, [step, walletAddress]);
 
   const handleConnect = async () => {
     setLoading(true);
@@ -96,6 +121,14 @@ export function Setup() {
     try {
       const res = await upgradeToSmartAccount();
       if (res.upgraded) {
+        setUpgradeFee(res.feeUsdc);
+        setUpgradeMethod(
+          res.method === "1shot_paymaster"
+            ? "1Shot Paymaster (USDC)"
+            : res.method === "1shot_relayer"
+              ? "1Shot Relayer (USDC)"
+              : "MetaMask wallet_sendCalls"
+        );
         setStep(3);
       }
     } catch (err: any) {
@@ -124,10 +157,13 @@ export function Setup() {
     setLoading(true);
     setError(null);
     try {
-      const grant = await grantPermission(budgetCap, whitelist, durationDays);
-      console.log(`Permission granted via ${grant.method}`);
-      await refreshAllData();
-      setSetupComplete(true);
+      const grant = await grantPermission(budgetCap, whitelist, durationDays, false);
+      const label =
+        grant.method === "erc7715"
+          ? "Advanced Permission (ERC-7715)"
+          : "Signed Delegation";
+      setLocalGrantMethod(label);
+      setGrantMethod(label);
       setStep(4);
     } catch (err: any) {
       console.error("Grant permission failed:", err);
@@ -136,6 +172,42 @@ export function Setup() {
       setLoading(false);
     }
   };
+
+  const handleApproveSuccessFee = async () => {
+    if (!walletAddress) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await approveSuccessFee(budgetCap);
+      if (!result.skipped) {
+        await postFeeAllowance(walletAddress, true);
+      }
+      await refreshAllData();
+      setSetupComplete(true);
+      setStep(5);
+    } catch (err: any) {
+      console.error("Success fee approval failed:", err);
+      setError("Success fee approval failed: " + (err.message || "Unknown error"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSkipSuccessFee = async () => {
+    setLoading(true);
+    try {
+      await refreshAllData();
+      setSetupComplete(true);
+      setStep(5);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const displayGrantMethod = localGrantMethod ?? storeGrantMethod;
+  const feeHookConfigured = Boolean(
+    SUCCESS_FEE_HOOK && SUCCESS_FEE_HOOK !== "0x0000000000000000000000000000000000000000"
+  );
 
   const formatAddr = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
 
@@ -206,7 +278,7 @@ export function Setup() {
     <div className="pt-32 pb-24 px-4 sm:px-6 max-w-2xl mx-auto min-h-screen flex flex-col items-center justify-center">
       {/* Progress Bar */}
       <div className="w-full flex items-center justify-center gap-2 mb-12">
-        {[1, 2, 3, 4].map(i => (
+        {[1, 2, 3, 4, 5].map(i => (
           <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-[#19C978]' : 'bg-white/10'}`} />
         ))}
       </div>
@@ -274,10 +346,12 @@ export function Setup() {
               </div>
               <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Smart Account Upgrade</h2>
               <p className="text-primary opacity-70 mb-4 max-w-sm">
-                Your wallet needs a one-time upgrade to a smart account. This costs $0.01 USDC. No ETH needed.
+                Your wallet needs a one-time upgrade to a smart account via the 1Shot relayer.
+                Estimated fee: <strong className="text-[#19C978]">${estimatedRelayFee.toFixed(2)} USDC</strong>. No ETH needed.
               </p>
 
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6 w-full text-left text-xs text-gray-400 space-y-2">
+              <div className="bg-[#19C978]/5 border border-[#19C978]/20 rounded-xl p-4 mb-6 w-full text-left text-xs text-gray-400 space-y-2">
+                <p>• Gas paid in USDC through 1Shot relayer</p>
                 <p>• Your wallet address stays the same</p>
                 <p>• Your funds stay exactly where they are</p>
                 <p>• Enables programmable permission features (EIP-7702)</p>
@@ -296,7 +370,7 @@ export function Setup() {
                 className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {loading ? 'Upgrading Wallet...' : 'Upgrade Account ($0.01)'}
+                {loading ? 'Upgrading via 1Shot...' : `Upgrade Account (~$${estimatedRelayFee.toFixed(2)} USDC)`}
               </button>
             </motion.div>
           ) : step === 3 ? (
@@ -308,9 +382,28 @@ export function Setup() {
               className="flex flex-col items-center text-center w-full"
             >
               <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-2 font-medium">Grant Permission</h2>
-              <p className="text-gray-400 text-sm mb-8 max-w-sm">
+              <p className="text-gray-400 text-sm mb-4 max-w-sm">
                 This is the most important step. Read exactly what Miiso can and cannot do before approving.
               </p>
+
+              {nativeGrantAvailable === true ? (
+                <div className="bg-[#19C978]/5 border border-[#19C978]/20 rounded-xl p-4 mb-6 w-full text-left text-xs">
+                  <p className="text-[#19C978] font-semibold mb-1">Native ERC-7715 permission screen</p>
+                  <p className="text-gray-400 leading-relaxed">
+                    MetaMask Flask will show the scoped Advanced Permission UI — approve(token, 0) only,
+                    with your budget cap and expiry visible.
+                  </p>
+                </div>
+              ) : nativeGrantAvailable === false ? (
+                <div className="bg-[#F59E0B]/5 border border-[#F59E0B]/20 rounded-xl p-4 mb-6 w-full text-left text-xs">
+                  <p className="text-[#F59E0B] font-semibold mb-1">Signed delegation fallback</p>
+                  <p className="text-gray-400 leading-relaxed">
+                    Your Flask build does not expose native ERC-7715 grant yet. Miiso will use a
+                    signed delegation message with the same scope — revocations only, enforced on-chain.
+                    The dashboard will show which method was used.
+                  </p>
+                </div>
+              ) : null}
               
               <div className="space-y-6 w-full text-left mb-8">
                 {/* Permission scope — clear and honest */}
@@ -434,8 +527,62 @@ export function Setup() {
               </button>
             </motion.div>
           ) : step === 4 ? (
+            <motion.div
+              key="step4-fee"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="flex flex-col items-center text-center w-full"
+            >
+              <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-6">
+                <Shield className="w-8 h-8 text-[#E1E0CC]" />
+              </div>
+              <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-2">Success Fee Authorization</h2>
+              <p className="text-gray-400 text-sm mb-6 max-w-sm">
+                Miiso only charges when it protects you — 1.5% of value saved. Pre-approve up to your
+                budget cap so fees can settle automatically on-chain after a confirmed protection event.
+              </p>
+
+              <div className="bg-black/60 p-5 rounded-xl border border-white/5 font-mono text-xs space-y-2 w-full text-left mb-6">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Max fee pull</span>
+                  <span className="text-[#E1E0CC]">{budgetCap} USDC</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Rate</span>
+                  <span className="text-[#E1E0CC]">1.5% of protected value</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Charged when</span>
+                  <span className="text-[#19C978]">Only after confirmed protection</span>
+                </div>
+              </div>
+
+              {feeHookConfigured ? (
+                <button
+                  onClick={handleApproveSuccessFee}
+                  disabled={loading}
+                  className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-bold hover:bg-white transition-colors flex items-center justify-center gap-2"
+                >
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {loading ? 'Approving USDC...' : `Approve ${budgetCap} USDC for Success Fees`}
+                </button>
+              ) : (
+                <div className="w-full space-y-3">
+                  <p className="text-xs text-gray-500">Success fee hook not deployed — skip for demo.</p>
+                  <button
+                    onClick={handleSkipSuccessFee}
+                    disabled={loading}
+                    className="w-full bg-[#E1E0CC] text-black rounded-full py-4 font-medium hover:bg-white transition-colors"
+                  >
+                    Continue to Dashboard
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          ) : step === 5 ? (
             <motion.div 
-              key="step4"
+              key="step5"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               className="flex flex-col items-center text-center"
@@ -455,8 +602,19 @@ export function Setup() {
                 </div>
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-[#19C978]" />
-                  <span className="text-[#E1E0CC]">ERC-7715 Permission granted</span>
+                  <span className="text-[#E1E0CC]">
+                    {displayGrantMethod ?? "Protection permission granted"}
+                  </span>
                 </div>
+                {upgradeMethod && (
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-[#19C978]" />
+                    <span className="text-[#E1E0CC]">
+                      Upgrade via {upgradeMethod}
+                      {upgradeFee != null && upgradeFee > 0 ? ` ($${upgradeFee.toFixed(2)} USDC)` : ""}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-[#19C978]" />
                   <span className="text-[#E1E0CC]">Sentinel scanning active</span>

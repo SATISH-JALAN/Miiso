@@ -1,6 +1,7 @@
 import { SiweMessage } from "siwe";
 import crypto from "node:crypto";
 import { agentAccount } from "../blockchain/walletClient.js";
+import { CHAIN_ID } from "../config/chain.js";
 import { logger } from "../utils/logger.js";
 import dotenv from "dotenv";
 
@@ -46,7 +47,7 @@ export async function buildSiweHeader(
     statement: "Miiso agent authentication for Venice AI inference",
     uri: `https://${domain}`,
     version: "1",
-    chainId: 8453, // Base mainnet
+    chainId: CHAIN_ID,
     nonce,
     issuedAt: new Date().toISOString(),
     expirationTime: expirationTime.toISOString(),

@@ -28,8 +28,9 @@ export async function analyzeRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ success: false, error: "No bytecode found at address" });
       }
 
-      const decompiledCode = await decompileContract(normalizedAddress, bytecode);
-      
+      const { decompiled: decompiledCode, source: decompileSource } =
+        await decompileContract(normalizedAddress, bytecode);
+
       const decision = await runOrchestrator(normalizedAddress, decompiledCode);
 
       const analysisAgent = decision.agentResults.find((r) => r.agentId === "analysis");
@@ -42,8 +43,9 @@ export async function analyzeRoutes(fastify: FastifyInstance) {
           combinedConfidence: decision.combinedConfidence, // This is 0.0 to 1.0
           staticRisks: analysisOutput?.staticFlags ?? [],
           veniceConfidenceVerdict: decision.combinedConfidence < 0.5 ? `${((1 - decision.combinedConfidence) * 100).toFixed(1)}% Safe` : `${(decision.combinedConfidence * 100).toFixed(1)}% Vulnerable`,
-          score: Math.round((1 - decision.combinedConfidence) * 100), // 100 is perfectly safe, 0 is perfectly vulnerable
-          totalCostUsdc: decision.totalCostUsdc
+          score: Math.round((1 - decision.combinedConfidence) * 100),
+          totalCostUsdc: decision.totalCostUsdc,
+          decompileSource,
         }
       });
     } catch (error: any) {

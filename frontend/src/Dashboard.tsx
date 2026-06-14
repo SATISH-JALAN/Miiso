@@ -24,6 +24,7 @@ export function Dashboard() {
   } = useWallet();
 
   const permissionContext = useStore((s) => s.permissionContext);
+  const grantMethod = useStore((s) => s.grantMethod);
   const events = useStore((s) => s.events);
   const setupComplete = useStore((s) => s.setupComplete);
   const isReadOnly = isConnected && !setupComplete;
@@ -95,35 +96,40 @@ export function Dashboard() {
   );
 
   // Convert stats totalSaved in Wei to a human readable estimated USD representation (assuming WETH = $3000)
-  const formatValueSaved = (weiStr: string) => {
-    if (!weiStr) return "$0";
-    if (weiStr.startsWith("$")) return weiStr;
+  const formatValueSaved = (rawStr: string) => {
+    if (!rawStr) return "$0";
+    if (rawStr.startsWith("$")) return rawStr;
     try {
-      const val = parseFloat(weiStr) / 1e18;
-      if (val === 0) return "$0";
-      return `$${(val * 3000).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+      const num = parseFloat(rawStr);
+      if (num === 0) return "$0";
+      // USDC and similar 6-decimal token amounts
+      if (num < 1e15) {
+        return `$${(num / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+      }
+      const ethVal = num / 1e18;
+      return `$${(ethVal * 3000).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
     } catch {
       return "$0";
     }
   };
 
-  const formatFee = (weiStr: string) => {
-    if (!weiStr) return "-";
-    if (weiStr.startsWith("$")) return "-";
+  const formatFee = (rawStr: string) => {
+    if (!rawStr) return "-";
+    if (rawStr.startsWith("$")) return rawStr;
     try {
-      const val = parseFloat(weiStr) / 1e18;
-      if (val === 0) return "-";
-      return `$${(val * 3000 * 0.015).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+      const num = parseFloat(rawStr);
+      if (num === 0) return "-";
+      const usd = num < 1e15 ? num / 1e6 : (num / 1e18) * 3000;
+      return `$${(usd * 0.015).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
     } catch {
       return "-";
     }
   };
 
-  // Convert budget values (in Wei) to token units
-  const formatBudget = (weiStr: string) => {
+  const formatBudget = (rawStr: string) => {
     try {
-      const val = parseFloat(weiStr) / 1e18;
-      return val.toFixed(4);
+      const num = parseFloat(rawStr);
+      return (num / 1e6).toFixed(2);
     } catch {
       return "0.00";
     }
@@ -241,6 +247,12 @@ export function Dashboard() {
             );
           })()}
           <div className="flex flex-col items-end">
+            <span className="text-gray-500 text-xs">Permission Method</span>
+            <span className="text-[#E1E0CC] font-mono text-xs">
+              {grantMethod ?? (setupComplete ? "Granted" : "—")}
+            </span>
+          </div>
+          <div className="flex flex-col items-end">
             <span className="text-gray-500 text-xs">USDC Budget Remaining</span>
             <span className="text-[#19C978] font-mono">
               {formatBudget(stats?.budgetRemaining || "0")} / {formatBudget(stats?.budgetCap || "0")} USDC
@@ -326,7 +338,7 @@ export function Dashboard() {
                   <div key={log.id} className={`bg-[#0B0B0C] p-3 rounded-lg border flex flex-col gap-2 ${isClean ? 'border-[#19C978]/20' : 'border-white/5'}`}>
                     <div className="flex justify-between items-start">
                       <a 
-                        href={`https://base-sepolia.blockscout.com/address/${log.spenderAddress}`}
+                        href={`https://sepolia.basescan.org/address/${log.spenderAddress}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-gray-400 hover:text-[#19C978] cursor-pointer transition-colors underline decoration-white/20"

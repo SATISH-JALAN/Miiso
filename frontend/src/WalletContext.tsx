@@ -150,6 +150,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       const res = await postVeto(eventId);
       if (res.cancelled) {
+        useStore.getState().markVetoCancelled(eventId);
         await refreshAllData();
         return true;
       }

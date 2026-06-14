@@ -38,6 +38,8 @@ export const permissionsRegistry = pgTable("permissions_registry", {
   budgetCap: numeric("budget_cap", { precision: 78, scale: 0 }).notNull(), // Wei scale
   budgetSpent: numeric("budget_spent", { precision: 78, scale: 0 }).default("0").notNull(),
   securityProfile: text("security_profile").default("balanced").notNull(), // 'safe' | 'balanced' | 'manual'
+  grantMethod: text("grant_method"), // 'erc7715' | 'signed_delegation'
+  feeAllowanceApproved: boolean("fee_allowance_approved").default(false).notNull(),
   expiry: timestamp("expiry").notNull(),
   revokedAt: timestamp("revoked_at"),
   createdAt: timestamp("created_at").defaultNow().notNull()
@@ -87,7 +89,18 @@ export const threatIntelCatalog = pgTable("threat_intel_catalog", {
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-// 5. Whitelist
+// 5. Per-user trusted protocol whitelist (skips auto-revoke for that spender)
+export const userWhitelist = pgTable("user_whitelist", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userAddress: text("user_address").notNull(),
+  address: text("address").notNull(),
+  protocolName: text("protocol_name").default("Custom").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+}, (t) => ({
+  userAddressUnique: unique("user_whitelist_user_address_unique").on(t.userAddress, t.address)
+}));
+
+// 6. Global protocol whitelist (skips scanning entirely)
 export const whitelist = pgTable("whitelist", {
   id: uuid("id").defaultRandom().primaryKey(),
   address: text("address").notNull().unique(),
@@ -95,7 +108,7 @@ export const whitelist = pgTable("whitelist", {
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-// 6. Token Approval Cache (to scale dashboard spender loading)
+// 7. Token Approval Cache (to scale dashboard spender loading)
 //    The SUM(allowance) over this table gives "Assets Protected" —
 //    the total token value currently under Miiso's guard.
 export const approvalCache = pgTable("approval_cache", {

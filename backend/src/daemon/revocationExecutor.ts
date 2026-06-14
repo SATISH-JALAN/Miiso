@@ -5,6 +5,7 @@ import { getActivePermission } from "../db/queries/permissions.js";
 import { insertProtectionEvent } from "../db/queries/protectionEvents.js";
 import { sseManager } from "../server/sse/sseManager.js";
 import { encodeFunctionData, getAddress } from "viem";
+import { CHAIN_ID, CHAIN_ID_HEX } from "../config/chain.js";
 import { logger } from "../utils/logger.js";
 import dotenv from "dotenv";
 
@@ -164,7 +165,7 @@ export async function executeRevocation(req: RevocationRequest) {
         calldata: callData,
         to: token,
         value: "0x0",
-        chainId: 8453,
+        chainId: CHAIN_ID,
       }),
     });
 
@@ -185,7 +186,7 @@ export async function executeRevocation(req: RevocationRequest) {
             calldata: callData,
             to: token,
             value: "0x0",
-            chainId: "0x2105",
+            chainId: CHAIN_ID_HEX,
             feeToken: feeCollector,
             maxFee: effectiveFee.toString(),
             signature: signedPayload,

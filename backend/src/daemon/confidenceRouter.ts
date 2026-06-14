@@ -6,9 +6,7 @@ import { sseManager } from "../server/sse/sseManager.js";
 import { eq, and, gt, isNull } from "drizzle-orm";
 import { logger } from "../utils/logger.js";
 import { sendTelegramAlert } from "../utils/telegram.js";
-import dotenv from "dotenv";
-
-dotenv.config();
+import { isUserWhitelisted } from "../db/queries/userWhitelist.js";
 
 const TIER1_THRESHOLD = parseFloat(process.env.TIER1_THRESHOLD || "0.85");
 const TIER2_THRESHOLD = parseFloat(process.env.TIER2_THRESHOLD || "0.70");
@@ -68,6 +66,13 @@ export async function routeThreatConfidence(input: ConfidenceRoutingInput) {
   // 3. Route actions individually per affected user based on threshold & securityProfile settings
   for (const record of affectedApprovals) {
     const user = record.userAddress.toLowerCase();
+
+    if (isUserWhitelisted(user, spender)) {
+      logger.info(
+        `ℹ️ Router: User ${user} whitelisted spender ${spender.slice(0, 10)}... — skipping revocation.`
+      );
+      continue;
+    }
     
     // Fetch active permission credentials for the user
     const permission = await getActivePermission(user);
@@ -98,6 +103,10 @@ export async function routeThreatConfidence(input: ConfidenceRoutingInput) {
       logger.warn(`🚨 Router: Tier 1 Immediate Revocation triggered for user ${user} (Confidence: ${combinedConfidence})`);
       
       try {
+        if (!(await hasBudgetForRevocation(user))) {
+          continue;
+        }
+
         await executeRevocation({
           userAddress: user,
           tokenAddress: record.tokenAddress,
@@ -231,6 +240,10 @@ function setupStagedTimer(eventId: string, user: string, token: string, spender:
           return;
         }
 
+        if (!(await hasBudgetForRevocation(user))) {
+          return;
+        }
+
         // Trigger EIP-7710 transaction
         await executeRevocation({
           userAddress: user,
@@ -308,43 +321,30 @@ export function clearAllStagedTimers() {
   stagedTimers.clear();
 }
 
+const ESTIMATED_RELAY_FEE_USDC = 0.01;
+
 /**
- * Lightweight routing helper for the orchestrator agent.
- * Returns the computed tier and list of affected user addresses WITHOUT
- * triggering any revocations — the orchestrator handles execution separately.
+ * Returns true if the user has sufficient budget remaining for a relay fee.
  */
-export async function routeByConfidence(
-  contractAddress: string,
-  combinedConfidence: number,
-  staticRisk: "high" | "medium" | "low",
-  vulnerabilities: string[]
-): Promise<{ tier: 1 | 2 | 3; affectedUsers: string[] }> {
-  const spender = contractAddress.toLowerCase();
+async function hasBudgetForRevocation(userAddress: string): Promise<boolean> {
+  const permission = await getActivePermission(userAddress);
+  if (!permission) return false;
 
-  // Find users who have approved this contract as a spender
-  const affectedApprovals = await db
-    .select()
-    .from(approvalCache)
-    .where(
-      and(
-        eq(approvalCache.spenderAddress, spender),
-        gt(approvalCache.allowance, "0")
-      )
+  const cap = BigInt(permission.budgetCap || "0");
+  const spent = BigInt(permission.budgetSpent || "0");
+  const feeMicro = BigInt(Math.ceil(ESTIMATED_RELAY_FEE_USDC * 1_000_000));
+
+  if (spent + feeMicro > cap) {
+    logger.warn(
+      `[Router] Budget exhausted for ${userAddress.slice(0, 8)} — spent=${spent} cap=${cap}`
     );
-
-  const affectedUsers = affectedApprovals.map((a) => a.userAddress.toLowerCase());
-
-  // Determine highest applicable tier based on combined confidence
-  let tier: 1 | 2 | 3 = 3;
-  if (combinedConfidence >= TIER1_THRESHOLD) {
-    tier = 1;
-  } else if (combinedConfidence >= TIER2_THRESHOLD) {
-    tier = 2;
+    sseManager.sendEventToUser(userAddress, "BUDGET_EXHAUSTED", {
+      userAddress,
+      budgetCap: permission.budgetCap,
+      budgetSpent: permission.budgetSpent,
+      message: "Monthly budget cap reached — revocation skipped",
+    });
+    return false;
   }
-
-  logger.info(
-    `[Router] routeByConfidence: ${spender.slice(0, 8)} confidence=${combinedConfidence.toFixed(2)} tier=${tier} affected=${affectedUsers.length} staticRisk=${staticRisk} vulns=${vulnerabilities.length}`
-  );
-
-  return { tier, affectedUsers };
+  return true;
 }

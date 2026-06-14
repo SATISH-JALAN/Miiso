@@ -28,6 +28,9 @@ export function postPermissions(body: {
   sessionSignerAddress: string;
   budgetCap: string;
   expiry: number;
+  grantMethod?: "erc7715" | "signed_delegation";
+  feeAllowanceApproved?: boolean;
+  whitelistAddresses?: string[];
 }) {
   return request<{ success: boolean; permission: Record<string, unknown> }>("/api/permissions", {
     method: "POST",
@@ -48,6 +51,35 @@ export function updateProfile(userAddress: string, securityProfile: string) {
     method: "POST",
     body: JSON.stringify({ userAddress, securityProfile }),
   });
+}
+
+export function getRelayCapabilities() {
+  return request<{
+    success: boolean;
+    feeUsdc: number;
+    maxFee: string;
+    relayerUrl: string;
+  }>("/api/relay/capabilities");
+}
+
+export function putUserWhitelist(address: string, addresses: string[]) {
+  return request<{ success: boolean; whitelistAddresses: string[] }>(
+    `/api/permissions/${address}/whitelist`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ addresses }),
+    }
+  );
+}
+
+export function postFeeAllowance(address: string, approved: boolean) {
+  return request<{ success: boolean; feeAllowanceApproved: boolean }>(
+    `/api/permissions/${address}/fee-allowance`,
+    {
+      method: "POST",
+      body: JSON.stringify({ approved }),
+    }
+  );
 }
 
 // ── Dashboard ────────────────────────────────────────────────────

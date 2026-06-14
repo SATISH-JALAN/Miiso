@@ -1,23 +1,21 @@
-// ===== usePermission — ERC-7715 permission grant + status =====
 import { useCallback } from "react";
 import { useStore } from "../store/index";
-import { requestPermissionGrant, signEIP7702Upgrade, isSmartAccount } from "../lib/metamask";
+import {
+  requestPermissionGrant,
+  upgradeVia1Shot,
+  approveSuccessFeeHook,
+  isSmartAccount,
+  type PermissionGrantMethod,
+} from "../lib/metamask";
 import { postPermissions, getPermissions, deletePermissions } from "../lib/api";
 
 const AGENT_ADDRESS = "0x6ED09F73cfe78555F950D3a325Aa38471fDF667d";
 
-/**
- * Hook for managing ERC-7715 permission lifecycle:
- * - Check if user has active permission
- * - Grant new permission (ERC-7715 via MetaMask Flask)
- * - Upgrade EOA to Smart Account (EIP-7702)
- * - Revoke permission
- * 
- * No fallbacks — requires MetaMask Flask for wallet_grantPermissions.
- */
 export function usePermission() {
   const userAddress = useStore((s) => s.userAddress);
   const setPermission = useStore((s) => s.setPermission);
+  const setGrantMethod = useStore((s) => s.setGrantMethod);
+  const setSetupComplete = useStore((s) => s.setSetupComplete);
 
   const checkPermission = useCallback(async () => {
     if (!userAddress) return null;
@@ -25,38 +23,74 @@ export function usePermission() {
       const result = await getPermissions(userAddress);
       if (result.success && result.permission) {
         setPermission(JSON.stringify(result.permission));
+        if (result.permission.grantMethod) {
+          const label =
+            result.permission.grantMethod === "erc7715"
+              ? "Advanced Permission (ERC-7715)"
+              : "Signed Delegation";
+          setGrantMethod(label);
+        }
+        setSetupComplete(true);
         return result.permission;
       }
+      setSetupComplete(false);
     } catch {
-      // No active permission
+      setSetupComplete(false);
     }
     return null;
-  }, [userAddress, setPermission]);
+  }, [userAddress, setPermission, setGrantMethod, setSetupComplete]);
 
-  const grantPermission = useCallback(async (budgetCap: number, whitelistAddresses: string[] = [], durationDays: number = 30) => {
-    if (!userAddress) throw new Error("Wallet not connected");
+  const grantPermission = useCallback(
+    async (
+      budgetCap: number,
+      whitelistAddresses: string[] = [],
+      durationDays: number = 30,
+      feeAllowanceApproved: boolean = false
+    ): Promise<{
+      method: PermissionGrantMethod;
+      permissionContext: string;
+      delegationHash: string;
+    }> => {
+      if (!userAddress) throw new Error("Wallet not connected");
 
-    // 1. Request ERC-7715 permission via MetaMask Flask (no fallback)
-    const { permissionContext, delegationHash, method } = await requestPermissionGrant(userAddress, budgetCap, durationDays);
+      const { permissionContext, delegationHash, method } =
+        await requestPermissionGrant(userAddress, budgetCap, durationDays);
 
-    // 2. Register permission with backend
-    const durationSeconds = durationDays * 24 * 60 * 60;
-    await postPermissions({
-      userAddress,
-      permissionContext,
-      delegationHash,
-      sessionSignerAddress: AGENT_ADDRESS,
-      budgetCap: (budgetCap * 1e18).toString(),
-      expiry: Math.floor(Date.now() / 1000) + durationSeconds,
-    });
+      const durationSeconds = durationDays * 24 * 60 * 60;
+      await postPermissions({
+        userAddress,
+        permissionContext,
+        delegationHash,
+        sessionSignerAddress: AGENT_ADDRESS,
+        budgetCap: Math.round(budgetCap * 1_000_000).toString(),
+        expiry: Math.floor(Date.now() / 1000) + durationSeconds,
+        grantMethod: method,
+        feeAllowanceApproved,
+        whitelistAddresses,
+      });
 
-    setPermission(permissionContext);
-    return { method, permissionContext, delegationHash };
-  }, [userAddress, setPermission]);
+      setPermission(permissionContext);
+      const methodLabel =
+        method === "erc7715"
+          ? "Advanced Permission (ERC-7715)"
+          : "Signed Delegation";
+      setGrantMethod(methodLabel);
+      return { method, permissionContext, delegationHash };
+    },
+    [userAddress, setPermission, setGrantMethod]
+  );
+
+  const approveSuccessFee = useCallback(
+    async (budgetCap: number) => {
+      if (!userAddress) throw new Error("Wallet not connected");
+      return approveSuccessFeeHook(userAddress, budgetCap);
+    },
+    [userAddress]
+  );
 
   const upgradeToSmartAccount = useCallback(async () => {
     if (!userAddress) throw new Error("Wallet not connected");
-    return signEIP7702Upgrade(userAddress);
+    return upgradeVia1Shot(userAddress);
   }, [userAddress]);
 
   const checkIsSmartAccount = useCallback(async () => {
@@ -68,11 +102,14 @@ export function usePermission() {
     if (!userAddress) throw new Error("Wallet not connected");
     await deletePermissions(userAddress);
     setPermission(null);
-  }, [userAddress, setPermission]);
+    setGrantMethod(null);
+    setSetupComplete(false);
+  }, [userAddress, setPermission, setGrantMethod, setSetupComplete]);
 
   return {
     checkPermission,
     grantPermission,
+    approveSuccessFee,
     upgradeToSmartAccount,
     checkIsSmartAccount,
     revokePermission,

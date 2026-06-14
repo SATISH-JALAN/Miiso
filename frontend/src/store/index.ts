@@ -21,6 +21,7 @@ interface MiisoState {
 
   // Permission
   permissionContext: string | null;
+  grantMethod: string | null;
 
   // Data
   stats: DashboardStats | null;
@@ -40,6 +41,7 @@ interface MiisoState {
   setSetupComplete: (complete: boolean) => void;
   setFlaskSupported: (supported: boolean | null) => void;
   setPermission: (ctx: string | null) => void;
+  setGrantMethod: (method: string | null) => void;
   setStats: (stats: DashboardStats | null) => void;
   setApprovals: (approvals: ApprovalInfo[]) => void;
   setHistory: (history: ProtectionEvent[]) => void;
@@ -51,6 +53,9 @@ interface MiisoState {
   // Veto actions
   startVeto: (event: ProtectionEvent, onFire: () => void) => void;
   cancelVeto: () => void;
+  confirmProtectionEvent: (eventId: string, txHash: string) => void;
+  markVetoCancelled: (eventId: string) => void;
+  setDormant: () => void;
 
   // Reset
   reset: () => void;
@@ -64,6 +69,7 @@ export const useStore = create<MiisoState>((set, get) => ({
   setupComplete: typeof window !== "undefined" ? localStorage.getItem("miiso_setup_complete") === "true" : false,
   flaskSupported: null,
   permissionContext: null,
+  grantMethod: null,
   stats: null,
   approvals: [],
   history: [],
@@ -91,6 +97,7 @@ export const useStore = create<MiisoState>((set, get) => ({
   },
   setFlaskSupported: (supported) => set({ flaskSupported: supported }),
   setPermission: (ctx) => set({ permissionContext: ctx }),
+  setGrantMethod: (method) => set({ grantMethod: method }),
   setStats: (stats) => set({ stats }),
   setApprovals: (approvals) => set({ approvals }),
   setHistory: (history) => set({ history, events: history.slice(0, 200) }),
@@ -104,21 +111,26 @@ export const useStore = create<MiisoState>((set, get) => ({
 
   // Veto timer
   startVeto: (event, onFire) => {
-    // Clear existing timer if any
     const existing = get().vetoTimer;
     if (existing) clearInterval(existing.intervalId);
+
+    const stagedUntilMs = event.stagedUntil
+      ? new Date(event.stagedUntil).getTime()
+      : Date.now() + 60_000;
+    let remaining = Math.max(0, Math.ceil((stagedUntilMs - Date.now()) / 1000));
+    if (remaining === 0) remaining = 60;
 
     const intervalId = setInterval(() => {
       const current = get().vetoTimer;
       if (!current) return;
 
-      const remaining = current.remaining - 1;
-      if (remaining <= 0) {
+      const nextRemaining = current.remaining - 1;
+      if (nextRemaining <= 0) {
         clearInterval(current.intervalId);
         set({ vetoTimer: null });
         onFire();
       } else {
-        set({ vetoTimer: { ...current, remaining } });
+        set({ vetoTimer: { ...current, remaining: nextRemaining } });
       }
     }, 1000);
 
@@ -126,7 +138,7 @@ export const useStore = create<MiisoState>((set, get) => ({
       vetoTimer: {
         eventId: event.id,
         event,
-        remaining: 60,
+        remaining,
         intervalId,
       },
     });
@@ -136,6 +148,52 @@ export const useStore = create<MiisoState>((set, get) => ({
     const { vetoTimer } = get();
     if (vetoTimer?.intervalId) clearInterval(vetoTimer.intervalId);
     set({ vetoTimer: null });
+  },
+
+  confirmProtectionEvent: (eventId, txHash) => {
+    const update = (e: ProtectionEvent) =>
+      e.id === eventId
+        ? {
+            ...e,
+            relayStatus: "confirmed" as const,
+            relayTxHash: txHash,
+            actionType: "revocation" as const,
+          }
+        : e;
+
+    const { vetoTimer } = get();
+    if (vetoTimer?.eventId === eventId && vetoTimer.intervalId) {
+      clearInterval(vetoTimer.intervalId);
+    }
+
+    set((s) => ({
+      history: s.history.map(update),
+      events: s.events.map(update),
+      vetoTimer: s.vetoTimer?.eventId === eventId ? null : s.vetoTimer,
+    }));
+  },
+
+  markVetoCancelled: (eventId) => {
+    const update = (e: ProtectionEvent) =>
+      e.id === eventId ? { ...e, vetoCancelled: true, relayStatus: "failed" as const } : e;
+
+    set((s) => ({
+      history: s.history.map(update),
+      events: s.events.map(update),
+      vetoTimer: s.vetoTimer?.eventId === eventId ? null : s.vetoTimer,
+    }));
+    get().cancelVeto();
+  },
+
+  setDormant: () => {
+    localStorage.removeItem("miiso_setup_complete");
+    set({
+      setupComplete: false,
+      permissionContext: null,
+      grantMethod: null,
+      stats: null,
+      approvals: [],
+    });
   },
 
   // Reset all state
@@ -151,6 +209,7 @@ export const useStore = create<MiisoState>((set, get) => ({
       setupComplete: false,
       flaskSupported: null,
       permissionContext: null,
+      grantMethod: null,
       stats: null,
       approvals: [],
       history: [],

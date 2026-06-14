@@ -51,12 +51,7 @@ export async function runAnalysisAgent(
     }
 
     // Calculate inference cost from Venice token usage
-    // Venice API returns usage in response — our analyzer may not expose tokens directly,
-    // so we use a heuristic: ~800 input tokens (decompiled code) + ~200 output tokens (JSON verdict)
-    const inputTokens = 800;
-    const outputTokens = 200;
-    const costUsdc =
-      (inputTokens / 1_000_000) * 0.18 + (outputTokens / 1_000_000) * 1.18;
+    const costUsdc = veniceOutput.costUsdc;
 
     // Map Venice vulnerability objects to flat string array for agent output
     const vulnerabilityNames = Array.isArray(veniceOutput.vulnerabilities)
