@@ -2,8 +2,9 @@ import { WordsPullUpMultiStyle, AnimatedLetterText } from './Shared';
 
 export function About() {
   return (
-    <section className="bg-[#111111] py-24 px-4 sm:px-6 z-10 relative">
-      <div className="bg-[#101010] max-w-6xl mx-auto rounded-3xl p-8 md:p-16 mb-24 flex flex-col items-center text-center">
+    <section className="bg-[#111111] pt-0 pb-24 px-4 sm:px-6 z-10 relative -mt-24 md:-mt-40">
+      <div className="absolute inset-x-0 top-0 h-32 md:h-48 bg-linear-to-b from-black to-transparent pointer-events-none" />
+      <div className="bg-[#101010] max-w-6xl mx-auto rounded-3xl p-8 md:p-16 mb-24 flex flex-col items-center text-center relative z-10 mt-12 md:mt-20">
         <span className="text-primary text-[10px] sm:text-xs tracking-widest uppercase mb-12">
           Autonomous Security
         </span>

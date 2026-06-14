@@ -15,7 +15,8 @@ export function Hero() {
         />
         {/* Overlays */}
         <div className="absolute inset-0 noise-overlay opacity-[0.7] mix-blend-overlay pointer-events-none z-10" />
-        <div className="absolute inset-0 bg-linear-to-b from-black/30 via-transparent to-black/60 z-10" />
+        <div className="absolute inset-0 bg-linear-to-b from-black/30 via-transparent to-black/80 z-10 pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-32 md:h-64 bg-linear-to-t from-black to-transparent z-10 pointer-events-none" />
 
         {/* Hero Content */}
         <div className="absolute bottom-0 left-0 right-0 z-20 p-6 md:p-12 lg:p-16">
