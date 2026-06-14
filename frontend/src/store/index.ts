@@ -100,7 +100,15 @@ export const useStore = create<MiisoState>((set, get) => ({
   setGrantMethod: (method) => set({ grantMethod: method }),
   setStats: (stats) => set({ stats }),
   setApprovals: (approvals) => set({ approvals }),
-  setHistory: (history) => set({ history, events: history.slice(0, 200) }),
+  setHistory: (history) => set((s) => {
+    // Merge history with live-only SSE events (clean scans etc.) that don't exist in history.
+    const historyIds = new Set(history.map((h) => h.id));
+    const liveOnlyEvents = s.events.filter((e) => !historyIds.has(e.id));
+    return {
+      history,
+      events: [...liveOnlyEvents, ...history].slice(0, 200),
+    };
+  }),
   setSecurityProfile: (profile) => set({ securityProfile: profile }),
 
   // Append event (max 200)
