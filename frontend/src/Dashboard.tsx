@@ -1,10 +1,19 @@
-import { Shield, AlertTriangle, CheckCircle, Activity, ArrowRight, Clock, X, HelpCircle, Info, ExternalLink } from 'lucide-react';
+import { Shield, AlertTriangle, Activity, ArrowRight, Clock, X, HelpCircle, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWallet, ProtectionEvent, ApprovalInfo } from './WalletContext';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { VetoTimer } from './components/dashboard/VetoTimer';
 import { TxLink } from './components/shared/TxLink';
+import {
+  DashboardEmptyState,
+  SystemPulseBar,
+  LiveFeedIdlePanel,
+  DemoReadyPanel,
+  StatCard,
+  SectionHeader,
+  TableShell,
+} from './components/dashboard/DashboardPanels';
 import { useStore } from './store';
 
 
@@ -135,6 +144,54 @@ export function Dashboard() {
     }
   };
 
+  const permissionExpiry = useMemo(() => {
+    if (!permissionContext || !setupComplete) {
+      return { daysLeft: "N/A", isExpired: false, permissionExpired: false };
+    }
+    try {
+      const parsed = JSON.parse(permissionContext);
+      const expiryRaw = parsed.expiry;
+      if (!expiryRaw) return { daysLeft: "N/A", isExpired: false, permissionExpired: false };
+
+      const expiryDate = new Date(
+        typeof expiryRaw === "string" ? expiryRaw : expiryRaw * 1000
+      );
+      const diffTime = expiryDate.getTime() - Date.now();
+      if (diffTime <= 0) {
+        return { daysLeft: "Expired", isExpired: true, permissionExpired: true };
+      }
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return { daysLeft: `${diffDays} days`, isExpired: false, permissionExpired: false };
+    } catch {
+      return { daysLeft: "N/A", isExpired: false, permissionExpired: false };
+    }
+  }, [permissionContext, setupComplete]);
+
+  const resolvedBudget = useMemo(() => {
+    let cap = parseFloat(stats?.budgetCap || "0");
+    let remaining = parseFloat(stats?.budgetRemaining || "0");
+    let spent = parseFloat(stats?.budgetSpent || "0");
+
+    if (cap === 0 && permissionContext) {
+      try {
+        const parsed = JSON.parse(permissionContext);
+        if (parsed.budgetCap) {
+          cap = parseFloat(String(parsed.budgetCap));
+          if (remaining === 0) remaining = cap;
+        }
+      } catch { /* ignore */ }
+    }
+
+    return { cap, remaining, spent };
+  }, [stats, permissionContext]);
+
+  const isIdleButArmed =
+    setupComplete &&
+    !isReadOnly &&
+    events.length === 0 &&
+    history.length === 0 &&
+    approvals.length === 0;
+
   const getRiskColor = (level: string) => {
     switch (level.toLowerCase()) {
       case 'high': return 'text-[#EF4444]';
@@ -168,36 +225,15 @@ export function Dashboard() {
       )}
 
       {/* Top Bar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-[#101010] p-4 rounded-2xl border border-white/5 mb-8 gap-4">
-        <div className="flex items-center gap-4">
-          {(() => {
-            // Compute permission status
-            let permissionExpired = false;
-            let daysLeft = "N/A";
-
-            if (permissionContext && setupComplete) {
-              try {
-                const parsed = JSON.parse(permissionContext);
-                if (parsed.expiry) {
-                  const expiryDate = new Date(typeof parsed.expiry === 'string' ? parsed.expiry : parsed.expiry * 1000);
-                  const diffTime = expiryDate.getTime() - Date.now();
-                  if (diffTime <= 0) {
-                    permissionExpired = true;
-                    daysLeft = "Expired";
-                  } else {
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    daysLeft = `${diffDays} days`;
-                  }
-                }
-              } catch { /* ignore */ }
-            }
-
-            const statusBadge = isReadOnly ? (
+      <div className="bg-[#101010] p-5 sm:p-6 rounded-2xl border border-white/5 mb-6">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+          <div className="flex flex-wrap items-center gap-3">
+            {isReadOnly ? (
               <div className="bg-[#F59E0B]/10 text-[#F59E0B] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2">
                 <div className="w-2 h-2 bg-[#F59E0B] rounded-full" />
                 READ ONLY
               </div>
-            ) : permissionExpired ? (
+            ) : permissionExpiry.permissionExpired ? (
               <div className="bg-red-500/10 text-[#EF4444] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2">
                 <div className="w-2 h-2 bg-[#EF4444] rounded-full" />
                 PERMISSION EXPIRED
@@ -207,56 +243,32 @@ export function Dashboard() {
                 <div className="w-2 h-2 bg-[#19C978] rounded-full animate-pulse" />
                 PROTECTION ACTIVE
               </div>
-            );
-
-            return (
-              <>
-                {statusBadge}
-                <span className="text-[#E1E0CC] font-mono text-sm">{formatAddr(walletAddress || "")}</span>
-              </>
-            );
-          })()}
-        </div>
-        <div className="flex items-center gap-6 text-sm">
-          {(() => {
-            let daysLeft = "N/A";
-            let isExpired = false;
-
-            if (permissionContext && setupComplete) {
-              try {
-                const parsed = JSON.parse(permissionContext);
-                if (parsed.expiry) {
-                  const expiryDate = new Date(typeof parsed.expiry === 'string' ? parsed.expiry : parsed.expiry * 1000);
-                  const diffTime = expiryDate.getTime() - Date.now();
-                  if (diffTime <= 0) {
-                    daysLeft = "Expired";
-                    isExpired = true;
-                  } else {
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    daysLeft = `${diffDays} days`;
-                  }
-                }
-              } catch { /* ignore */ }
-            }
-
-            return (
-              <div className="flex flex-col items-end">
-                <span className="text-gray-500 text-xs">Permission Expiry</span>
-                <span className={`font-mono ${isExpired ? 'text-[#EF4444]' : 'text-[#E1E0CC]'}`}>{daysLeft}</span>
-              </div>
-            );
-          })()}
-          <div className="flex flex-col items-end">
-            <span className="text-gray-500 text-xs">Permission Method</span>
-            <span className="text-[#E1E0CC] font-mono text-xs">
-              {grantMethod ?? (setupComplete ? "Granted" : "—")}
+            )}
+            <span className="text-[#E1E0CC] font-mono text-sm">{formatAddr(walletAddress || "")}</span>
+            <span className="hidden sm:inline text-[10px] font-mono text-gray-600 px-2 py-0.5 rounded border border-white/5">
+              Base Sepolia
             </span>
           </div>
-          <div className="flex flex-col items-end">
-            <span className="text-gray-500 text-xs">USDC Budget Remaining</span>
-            <span className="text-[#19C978] font-mono">
-              {formatBudget(stats?.budgetRemaining || "0")} / {formatBudget(stats?.budgetCap || "0")} USDC
-            </span>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-8 text-sm">
+            <div>
+              <span className="text-gray-500 text-[10px] uppercase tracking-widest block mb-0.5">Permission Expiry</span>
+              <span className={`font-mono text-sm ${permissionExpiry.isExpired ? "text-[#EF4444]" : "text-[#E1E0CC]"}`}>
+                {permissionExpiry.daysLeft}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-500 text-[10px] uppercase tracking-widest block mb-0.5">Permission Method</span>
+              <span className="text-[#E1E0CC] text-sm">
+                {grantMethod ?? (setupComplete ? "Granted" : "—")}
+              </span>
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <span className="text-gray-500 text-[10px] uppercase tracking-widest block mb-0.5">USDC Budget Remaining</span>
+              <span className="text-[#19C978] font-mono text-sm">
+                {formatBudget(String(resolvedBudget.remaining))} / {formatBudget(String(resolvedBudget.cap))} USDC
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -286,31 +298,52 @@ export function Dashboard() {
       )}
 
       {/* Zone 1 - Overview Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: "Assets Protected", value: formatValueSaved(stats?.totalActiveExposure || "0") },
-
-          { label: "Active Approvals", value: approvals.length.toString() },
-          { label: "Threats Detected", value: (stats?.threatsDetected || 0).toString() },
-          { label: "Value Saved", value: formatValueSaved(stats?.totalSaved || "0") }
-        ].map((stat, i) => (
-          <div key={i} className="bg-[#101010] p-6 rounded-2xl border border-white/5">
-            <span className="text-gray-500 text-xs tracking-widest uppercase mb-2 block">{stat.label}</span>
-            <span className="text-3xl text-[#E1E0CC] font-medium tracking-tight">{stat.value}</span>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <StatCard
+          label="Assets Protected"
+          value={formatValueSaved(stats?.totalActiveExposure || "0")}
+          subtext={approvals.length === 0 ? "No exposed approvals" : `${approvals.length} approval(s) tracked`}
+        />
+        <StatCard
+          label="Active Approvals"
+          value={approvals.length.toString()}
+          subtext={approvals.length === 0 ? "Wallet clear" : "Under monitoring"}
+        />
+        <StatCard
+          label="Threats Detected"
+          value={(stats?.threatsDetected || 0).toString()}
+          subtext={(stats?.threatsDetected || 0) === 0 ? "Sentinel idle" : "Analyzed by Venice AI"}
+        />
+        <StatCard
+          label="Value Saved"
+          value={formatValueSaved(stats?.totalSaved || "0")}
+          subtext={history.length === 0 ? "No revocations yet" : `${history.length} protection event(s)`}
+          accent={(stats?.totalSaved && parseFloat(stats.totalSaved) > 0) || history.length > 0}
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <SystemPulseBar
+        setupComplete={setupComplete}
+        isReadOnly={isReadOnly}
+        walletAddress={walletAddress}
+      />
+
+      {isIdleButArmed && (
+        <div className="mb-6">
+          <DemoReadyPanel show />
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
         {/* Zone 2 - Live Threat Feed */}
-        <div className="lg:col-span-1 bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex flex-col h-125">
-          <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0B0B0C]">
-            <h2 className="text-[#E1E0CC] font-medium text-lg">Live Network Scans</h2>
-            <Activity className="w-5 h-5 text-[#19C978] animate-pulse" />
-          </div>
-          <div className="p-4 flex-1 overflow-y-auto space-y-3 font-mono text-xs">
+        <div className="xl:col-span-5 bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex flex-col min-h-[420px]">
+          <SectionHeader
+            title="Live Network Scans"
+            icon={<Activity className="w-4 h-4 text-[#19C978] animate-pulse" />}
+          />
+          <div className="p-3 flex-1 overflow-y-auto space-y-3 font-mono text-xs">
             {events.length === 0 ? (
-              <div className="text-gray-500 text-center py-8">No security logs recorded. System monitoring.</div>
+              <LiveFeedIdlePanel setupComplete={setupComplete && !isReadOnly} />
             ) : (
               events.map((log: ProtectionEvent) => {
                 const isRevocation = log.actionType === "revocation";
@@ -381,32 +414,44 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="lg:col-span-2 space-y-8">
+        <div className="xl:col-span-7 flex flex-col gap-6 min-h-[420px]">
           {/* Zone 3 - Protected Assets */}
-          <div className="bg-[#101010] rounded-2xl border border-white/5 overflow-hidden">
-            <div className="p-6 border-b border-white/5 bg-[#0B0B0C] flex justify-between items-center">
-              <h2 className="text-[#E1E0CC] font-medium text-lg">Protected Assets</h2>
-              {approvals.length > 0 && (
-                <button
-                  onClick={handleBatchRevoke}
-                  disabled={isBatchRevoking}
-                  className="bg-red-500/10 hover:bg-red-500/20 text-[#EF4444] border border-red-500/20 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-300 flex items-center gap-2 disabled:opacity-50"
-                >
-                  {isBatchRevoking ? (
-                    <>
-                      <div className="w-3 h-3 border-2 border-t-transparent border-[#EF4444] rounded-full animate-spin" />
-                      Securing...
-                    </>
-                  ) : (
-                    "Secure Wallet (Batch Revoke)"
-                  )}
-                </button>
-              )}
-            </div>
-            <div className="overflow-x-auto">
-              {approvals.length === 0 ? (
-                <div className="p-6 text-gray-500 text-center font-mono">No active token approvals cached.</div>
-              ) : (
+          <div className="bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex-1 flex flex-col">
+            <SectionHeader
+              title="Protected Assets"
+              action={
+                approvals.length > 0 ? (
+                  <button
+                    onClick={handleBatchRevoke}
+                    disabled={isBatchRevoking}
+                    className="bg-red-500/10 hover:bg-red-500/20 text-[#EF4444] border border-red-500/20 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-300 flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isBatchRevoking ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-t-transparent border-[#EF4444] rounded-full animate-spin" />
+                        Securing...
+                      </>
+                    ) : (
+                      "Secure Wallet (Batch Revoke)"
+                    )}
+                  </button>
+                ) : undefined
+              }
+            />
+            {approvals.length === 0 ? (
+              <TableShell
+                columns={["Token", "Spender", "Amount", "Risk", "Action"]}
+                empty={
+                  <DashboardEmptyState
+                    icon={<Shield className="w-5 h-5" />}
+                    title="No active approvals cached"
+                    description="When you grant a token approval on-chain, Miiso indexes it here with risk scoring and one-click revoke."
+                    hint={setupComplete ? "Approve USDC to trigger the demo flow" : "Complete setup to start indexing"}
+                  />
+                }
+              />
+            ) : (
+              <div className="overflow-x-auto flex-1">
                 <table className="w-full text-left text-sm whitespace-nowrap">
                   <thead>
                     <tr className="border-b border-white/5 text-gray-500 h-12">
@@ -456,19 +501,27 @@ export function Dashboard() {
                     })}
                   </tbody>
                 </table>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Zone 4 - Protection History */}
-          <div className="bg-[#101010] rounded-2xl border border-white/5 overflow-hidden">
-            <div className="p-6 border-b border-white/5 bg-[#0B0B0C]">
-              <h2 className="text-[#E1E0CC] font-medium text-lg">Protection History</h2>
-            </div>
-            <div className="overflow-x-auto">
-              {history.length === 0 ? (
-                <div className="p-6 text-gray-500 text-center font-mono">No protection history logs found.</div>
-              ) : (
+          <div className="bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex-1 flex flex-col">
+            <SectionHeader title="Protection History" />
+            {history.length === 0 ? (
+              <TableShell
+                columns={["Date/Time", "Threat/Action", "Value At Risk", "Fee (1.5%)", "Tx Hash", "Veto status"]}
+                empty={
+                  <DashboardEmptyState
+                    icon={<Activity className="w-5 h-5" />}
+                    title="No protection events yet"
+                    description="Auto-revocations and veto cooldowns appear here with Venice scores, relay fees, and BaseScan links."
+                    hint="Events populate live during the demo — no seed data needed"
+                  />
+                }
+              />
+            ) : (
+              <div className="overflow-x-auto flex-1">
                 <table className="w-full text-left text-sm whitespace-nowrap">
                   <thead>
                     <tr className="border-b border-white/5 text-gray-500 h-12">
@@ -522,36 +575,39 @@ export function Dashboard() {
                     })}
                   </tbody>
                 </table>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Budget Tracker Section */}
-      <div className="mt-8 bg-[#101010] p-6 rounded-2xl border border-white/5">
+      <div className="mt-6 bg-[#101010] p-5 sm:p-6 rounded-2xl border border-white/5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div>
             <h3 className="text-[#E1E0CC] font-medium text-base mb-1">Monthly Gas Relayer Budget</h3>
-            <p className="text-xs text-gray-500 max-w-xl">
-              Shows how much of the monthly gas budget has been used this period. The Sentinel scans Base contracts at ~$0.00095 per scan (Venice inference). The budget is only consumed if an automated revocation/veto relay transaction fires.
+            <p className="text-xs text-gray-500 max-w-xl leading-relaxed">
+              Budget is consumed only when an automated revocation relay fires via 1Shot. Sentinel scans are separate (~$0.001/scan).
             </p>
           </div>
-          <div className="flex items-baseline gap-2 font-mono">
-            <span className="text-[#19C978] text-2xl font-bold">${parseFloat(formatBudget(stats?.budgetSpent || "0")).toFixed(2)}</span>
-            <span className="text-gray-500 text-sm">/ ${parseFloat(formatBudget(stats?.budgetCap || "0")).toFixed(2)} USDC spent</span>
+          <div className="flex items-baseline gap-2 font-mono shrink-0">
+            <span className="text-[#19C978] text-2xl font-bold">
+              ${formatBudget(String(resolvedBudget.spent))}
+            </span>
+            <span className="text-gray-500 text-sm">
+              / ${formatBudget(String(resolvedBudget.cap))} USDC spent
+            </span>
           </div>
         </div>
-        
-        {/* Progress Bar */}
+
         {(() => {
-          const cap = parseFloat(formatBudget(stats?.budgetCap || "0"));
-          const spent = parseFloat(formatBudget(stats?.budgetSpent || "0"));
+          const cap = resolvedBudget.cap / 1e6;
+          const spent = resolvedBudget.spent / 1e6;
           const percent = cap > 0 ? Math.min(100, (spent / cap) * 100) : 0;
           return (
-            <div className="w-full bg-white/5 h-2.5 rounded-full overflow-hidden">
-              <div 
-                className="bg-[#19C978] h-full rounded-full transition-all duration-500" 
+            <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-[#19C978] h-full rounded-full transition-all duration-500"
                 style={{ width: `${percent}%` }}
               />
             </div>

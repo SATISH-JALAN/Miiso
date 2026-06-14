@@ -14,6 +14,8 @@ const USDC_ADDRESS = (import.meta.env.VITE_USDC_ADDRESS ||
   "0x036CbD53842c5426634e7929541eC2318f3dCF7e") as `0x${string}`;
 const SUCCESS_FEE_HOOK = (import.meta.env.VITE_SUCCESS_FEE_HOOK || "") as `0x${string}`;
 const SMART_ACCOUNT_IMPL = (import.meta.env.VITE_SMART_ACCOUNT_IMPL || "") as `0x${string}`;
+const DELEGATION_MANAGER_ADDRESS = (import.meta.env.VITE_DELEGATION_MANAGER_ADDRESS ||
+  "0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3") as `0x${string}`;
 
 export type PermissionGrantMethod = "erc7715" | "signed_delegation";
 export type UpgradeMethod = "1shot_paymaster" | "1shot_relayer" | "wallet_sendCalls";
@@ -546,4 +548,4 @@ export async function approveSuccessFeeHook(
   return { approved: true, txHash, skipped: false };
 }
 
-export { AGENT_ADDRESS, ENFORCER_ADDRESS, USDC_ADDRESS, SUCCESS_FEE_HOOK };
+export { AGENT_ADDRESS, ENFORCER_ADDRESS, USDC_ADDRESS, SUCCESS_FEE_HOOK, DELEGATION_MANAGER_ADDRESS };

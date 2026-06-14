@@ -1,6 +1,7 @@
 import { db } from "../db/client.js";
 import { approvalCache, protectionEvents } from "../db/schema.js";
 import { getActivePermission } from "../db/queries/permissions.js";
+import { runExecutorAgent } from "../agents/executorAgent.js";
 import { executeRevocation } from "./revocationExecutor.js";
 import { sseManager } from "../server/sse/sseManager.js";
 import { eq, and, gt, isNull } from "drizzle-orm";
@@ -107,15 +108,19 @@ export async function routeThreatConfidence(input: ConfidenceRoutingInput) {
           continue;
         }
 
-        await executeRevocation({
-          userAddress: user,
-          tokenAddress: record.tokenAddress,
-          spenderAddress: spender,
-          exposedValue: record.allowance,
-          permissionContext: permission.permissionContext,
-          delegationHash: permission.delegationHash,
-          severity: "high"
-        });
+        const execResult = await runExecutorAgent(
+          user,
+          record.tokenAddress,
+          spender,
+          record.allowance
+        );
+
+        if (execResult.status !== "success") {
+          logger.error(
+            `❌ Router: Executor agent failed for user ${user}: ${execResult.error ?? "unknown error"}`
+          );
+          continue;
+        }
 
         await sendTelegramAlert(
           `🚨 <b>Miiso Sentinel Blocked Threat! (Immediate)</b>\n\n` +

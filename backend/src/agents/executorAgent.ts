@@ -12,7 +12,7 @@ export async function runExecutorAgent(
   userAddress: string,
   tokenAddress: string,
   spenderAddress: string,
-  exposedValue: number
+  exposedValue: string | number
 ): Promise<AgentResult<ExecutorOutput>> {
   const start = Date.now();
 

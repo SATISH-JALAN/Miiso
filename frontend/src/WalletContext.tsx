@@ -4,6 +4,7 @@ import { useSSE } from './hooks/useSSE';
 import { useDashboard } from './hooks/useDashboard';
 import { usePermission } from './hooks/usePermission';
 import { postRevoke, postBatchRevoke, postVeto, postExecuteVeto, updateProfile } from './lib/api';
+import { DELEGATION_MANAGER_ADDRESS } from './lib/metamask';
 import type { ApprovalInfo, ProtectionEvent, DashboardStats, SecurityProfile } from './types/index';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 
@@ -223,11 +224,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         // Let's check on-chain if using MetaMask and not local anvil default keys:
         if (typeof window !== 'undefined' && (window as any).ethereum) {
           try {
-            const DELEGATION_MANAGER_ADDRESS = "0xe264F1f09A19505a1ca1a86D5b01E8bFdb64324A";
             const provider = (window as any).ethereum;
             
-            // Default hash to use if delegationHash is not returned directly in stats/metadata:
-            // The frontend has it in local storage or we can fallback to dummy hash if needed
             const delegationHash = (perm as any).delegationHash || "0x0000000000000000000000000000000000000000000000000000000000000000";
             
             await provider.request({
