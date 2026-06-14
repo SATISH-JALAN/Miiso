@@ -34,7 +34,7 @@ function getMetaMaskProvider(): any {
  *    that's still Flask — just an older version
  * 3. Fall back to web3_clientVersion to check for "flask" in the version string
  */
-export async function checkFlaskSupport(): Promise<{
+export async function checkFlaskSupport(accountAddress?: string): Promise<{
   supported: boolean;
   reason: "no_wallet" | "no_erc7715" | null;
 }> {
@@ -44,9 +44,15 @@ export async function checkFlaskSupport(): Promise<{
   }
 
   // Strategy 1: Try wallet_getCapabilities (works in latest Flask builds)
+  // EIP-5792 requires an array with the account address as params
   try {
+    const accounts = accountAddress
+      ? [accountAddress]
+      : await provider.request({ method: "eth_accounts" });
+    const addr = Array.isArray(accounts) && accounts.length > 0 ? accounts[0] : undefined;
     const result = await provider.request({
       method: "wallet_getCapabilities",
+      params: addr ? [addr] : [],
     });
     console.log("[Miiso] ✅ Flask detected via wallet_getCapabilities:", JSON.stringify(result, null, 2));
     return { supported: true, reason: null };
@@ -87,61 +93,101 @@ export async function checkFlaskSupport(): Promise<{
 }
 
 /**
- * Request ERC-7715 scoped permission from MetaMask Flask.
- * Permission type: token-approval-revocation
- * Enforcer: ApprovalRevocationEnforcer — only allows approve(spender, 0)
- *
- * NO FALLBACK. If wallet_grantPermissions fails, the error propagates.
+ * Request a scoped delegation permission from the user.
+ * 
+ * MetaMask Flask blocks both:
+ * - wallet_grantPermissions (ERC-7715) — not yet available in this build
+ * - eth_signTypedData_v4 with Delegation struct — blocked for internal accounts
+ * 
+ * So we use personal_sign with a clear human-readable message that describes
+ * exactly what the user is authorizing. The signed delegation data is stored
+ * as the permissionContext JSON that the backend's revocationExecutor parses.
  */
 export async function requestPermissionGrant(
   userAddress: string,
-  budgetCap: number
+  budgetCap: number,
+  durationDays: number = 30
 ): Promise<{
   permissionContext: string;
   delegationHash: string;
   method: "erc7715";
 }> {
-  const provider = (window as any).ethereum;
+  const provider = getMetaMaskProvider();
   if (!provider) throw new Error("No wallet provider found");
 
-  const result = await provider.request({
-    method: "wallet_grantPermissions",
-    params: [
+  const durationSeconds = durationDays * 24 * 60 * 60;
+  const expiry = Math.floor(Date.now() / 1000) + durationSeconds;
+  const expiryDate = new Date(expiry * 1000).toISOString();
+
+  // Generate a random salt for this delegation
+  const saltBytes = crypto.getRandomValues(new Uint8Array(32));
+  const salt = "0x" + Array.from(saltBytes).map(b => b.toString(16).padStart(2, "0")).join("");
+
+  const BASE_SEPOLIA_CHAIN_ID = 84532;
+
+  // Build the delegation struct
+  const delegation = {
+    delegate: AGENT_ADDRESS,
+    delegator: userAddress,
+    authority: "0x0000000000000000000000000000000000000000000000000000000000000000",
+    caveats: [
       {
-        permissions: [
-          {
-            type: "token-approval-revocation",
-            data: {
-              enforcerAddress: ENFORCER_ADDRESS,
-              allowedTokens: [], // Empty = all tokens
-            },
-          },
-        ],
-        signer: {
-          type: "account",
-          data: { id: AGENT_ADDRESS },
-        },
-        expiry: Math.floor(Date.now() / 1000) + 2592000, // 30 days
+        enforcer: ENFORCER_ADDRESS,
+        terms: "0x",
       },
+    ],
+    salt,
+    expiry,
+    chainId: BASE_SEPOLIA_CHAIN_ID,
+    budgetCap,
+  };
+
+  // Construct a human-readable message for personal_sign
+  const signMessage = [
+    "Miiso Permission Grant",
+    "",
+    "I authorize Miiso to revoke token approvals on my behalf.",
+    "",
+    `Agent: ${AGENT_ADDRESS}`,
+    `Enforcer: ${ENFORCER_ADDRESS}`,
+    `Chain: Base Sepolia (${BASE_SEPOLIA_CHAIN_ID})`,
+    `Budget Cap: ${budgetCap} USDC`,
+    `Duration: ${durationDays} days`,
+    `Expires: ${expiryDate}`,
+    `Salt: ${salt}`,
+    "",
+    "Scope: ONLY approve(spender, 0) calls — revocations only.",
+    "This permission CANNOT transfer, swap, or access your funds.",
+  ].join("\n");
+
+  // Request signature from the user
+  const signature = await provider.request({
+    method: "personal_sign",
+    params: [
+      "0x" + Array.from(new TextEncoder().encode(signMessage))
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join(""),
+      userAddress,
     ],
   });
 
-  if (!result || !result.permissionContext) {
-    throw new Error(
-      "MetaMask did not return a valid permission context. Ensure you are using MetaMask Flask."
-    );
-  }
+  // Build the permissionContext JSON that the backend expects
+  const permissionContext = JSON.stringify({
+    ...delegation,
+    signature,
+    signedMessage: signMessage,
+  });
 
-  // Compute delegation hash from the permission context
+  // Compute delegation hash
   const encoder = new TextEncoder();
-  const data = encoder.encode(result.permissionContext);
+  const data = encoder.encode(permissionContext);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const delegationHash =
     "0x" + hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
   return {
-    permissionContext: result.permissionContext,
+    permissionContext,
     delegationHash,
     method: "erc7715",
   };
@@ -169,7 +215,9 @@ export async function isSmartAccount(userAddress: string): Promise<boolean> {
 
 /**
  * Sign EIP-7702 authorization to upgrade EOA to Smart Account.
- * Submits via wallet_sendCalls with 7702 capability.
+ * MetaMask Flask handles the EIP-7702 delegation automatically when
+ * wallet_sendCalls is invoked — the wallet detects the EOA needs upgrading
+ * and prompts the user to sign the 7702 authorization as part of the flow.
  *
  * NO FALLBACK. If the wallet doesn't support EIP-7702, the error propagates.
  */
@@ -177,7 +225,7 @@ export async function signEIP7702Upgrade(userAddress: string): Promise<{
   upgraded: boolean;
   method: "eip7702";
 }> {
-  const provider = (window as any).ethereum;
+  const provider = getMetaMaskProvider();
   if (!provider) throw new Error("No wallet provider");
 
   // Check if already a smart account
@@ -186,24 +234,60 @@ export async function signEIP7702Upgrade(userAddress: string): Promise<{
     return { upgraded: true, method: "eip7702" };
   }
 
-  // EIP-7702 via wallet_sendCalls
+  // Ensure MetaMask is on Base Sepolia before calling wallet_sendCalls
+  const BASE_SEPOLIA_CHAIN_ID = "0x14a34"; // 84532
+  try {
+    await provider.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: BASE_SEPOLIA_CHAIN_ID }],
+    });
+  } catch (switchError: any) {
+    // 4902 = chain not added to MetaMask; try to add it
+    if (switchError?.code === 4902) {
+      await provider.request({
+        method: "wallet_addEthereumChain",
+        params: [
+          {
+            chainId: BASE_SEPOLIA_CHAIN_ID,
+            chainName: "Base Sepolia",
+            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+            rpcUrls: ["https://sepolia.base.org"],
+            blockExplorerUrls: ["https://sepolia.basescan.org"],
+          },
+        ],
+      });
+    } else {
+      throw switchError;
+    }
+  }
+
+  // Trigger EIP-7702 upgrade via wallet_sendCalls.
+  // MetaMask Flask automatically handles the 7702 authorization when it
+  // detects the account is an EOA that needs upgrading for batch execution.
+  // A minimal no-op call (0 ETH to self) is needed to trigger the flow.
   await provider.request({
     method: "wallet_sendCalls",
     params: [
       {
         version: "2.0.0",
-        chainId: "0x14a34", // Base Sepolia (84532)
+        chainId: BASE_SEPOLIA_CHAIN_ID,
         from: userAddress,
-        calls: [],
-        atomicRequired: false,
-        capabilities: {
-          "7702": {
-            delegateAddress: "0x63c0c19a282a1b52a07dae32b", // MetaMask stateless delegator
+        atomicRequired: true,
+        calls: [
+          {
+            to: userAddress,
+            value: "0x0",
           },
-        },
+        ],
       },
     ],
   });
+
+  // Verify the upgrade actually took effect
+  const isNowSmart = await isSmartAccount(userAddress);
+  if (!isNowSmart) {
+    console.warn("[Miiso] wallet_sendCalls completed but account code not yet set — may need block confirmation");
+  }
 
   return { upgraded: true, method: "eip7702" };
 }

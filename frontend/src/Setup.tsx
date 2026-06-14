@@ -22,8 +22,16 @@ export function Setup() {
 
   // Setup Wizard Custom configurations
   const [budgetCap, setBudgetCap] = useState(5);
+  const [durationDays, setDurationDays] = useState(30);
   const [whitelist, setWhitelist] = useState<string[]>([]);
   const [newWhitelistAddress, setNewWhitelistAddress] = useState('');
+
+  const durationOptions = [
+    { days: 7, label: '7 days' },
+    { days: 30, label: '30 days' },
+    { days: 90, label: '90 days' },
+    { days: 365, label: '1 year' },
+  ];
 
   // On wallet connect: check Flask support, then smart account status
   useEffect(() => {
@@ -33,7 +41,7 @@ export function Setup() {
         setError(null);
         try {
           // 1. Check Flask/ERC-7715 support
-          const flaskResult = await checkFlaskSupport();
+          const flaskResult = await checkFlaskSupport(walletAddress ?? undefined);
           setFlaskSupported(flaskResult.supported);
 
           if (!flaskResult.supported) {
@@ -116,7 +124,7 @@ export function Setup() {
     setLoading(true);
     setError(null);
     try {
-      const grant = await grantPermission(budgetCap, whitelist);
+      const grant = await grantPermission(budgetCap, whitelist, durationDays);
       console.log(`Permission granted via ${grant.method}`);
       await refreshAllData();
       setSetupComplete(true);
@@ -325,7 +333,7 @@ export function Setup() {
                   </div>
                   <div className="flex justify-between border-b border-white/5 pb-2">
                     <span className="text-gray-500">Duration</span>
-                    <span className="text-[#E1E0CC]">30 days, renewable</span>
+                    <span className="text-[#E1E0CC]">{durationOptions.find(d => d.days === durationDays)?.label || `${durationDays} days`}, renewable</span>
                   </div>
                   <div className="flex justify-between border-b border-white/5 pb-2">
                     <span className="text-gray-500">Cost</span>
@@ -352,6 +360,29 @@ export function Setup() {
                     onChange={(e) => setBudgetCap(Number(e.target.value))}
                     className="w-full accent-[#19C978] bg-white/10 rounded-lg h-1.5 cursor-pointer"
                   />
+                </div>
+
+                {/* Duration Selector */}
+                <div className="bg-black/40 border border-white/5 p-5 rounded-2xl">
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Permission Duration</label>
+                    <span className="text-[#19C978] font-mono font-bold text-sm">{durationOptions.find(d => d.days === durationDays)?.label || `${durationDays} days`}</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {durationOptions.map((opt) => (
+                      <button
+                        key={opt.days}
+                        onClick={() => setDurationDays(opt.days)}
+                        className={`py-2 px-3 rounded-lg text-xs font-medium transition-all ${
+                          durationDays === opt.days
+                            ? 'bg-[#19C978]/20 border border-[#19C978]/50 text-[#19C978]'
+                            : 'bg-black/60 border border-white/5 text-gray-400 hover:border-white/20 hover:text-[#E1E0CC]'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Whitelist */}
