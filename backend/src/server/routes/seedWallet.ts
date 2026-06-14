@@ -3,6 +3,7 @@ import { db } from "../../db/client.js";
 import { permissionsRegistry, approvalCache, protectionEvents, contractScanLog, whitelist } from "../../db/schema.js";
 import { loadWhitelist } from "../../security/whitelist.js";
 import { loadUserWhitelists } from "../../db/queries/userWhitelist.js";
+import { logger } from "../../utils/logger.js";
 
 interface SeedWalletRequestBody {
   userAddress: string;
