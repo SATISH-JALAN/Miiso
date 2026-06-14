@@ -40,8 +40,9 @@ export function Navbar() {
   return (
     <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-7xl px-4 md:px-6 pt-6 pointer-events-none flex justify-center">
       <div className="flex items-center gap-2 pointer-events-auto">
-        <Link to="/" className="bg-black rounded-full px-6 py-3 flex items-center gap-6 border border-white/10 shadow-2xl text-[#E1E0CC] font-bold text-lg tracking-tight">
-          Miiso
+        <Link to="/" className="bg-black rounded-full pl-4 pr-6 py-2 flex items-center gap-1 border border-white/10 shadow-2xl text-[#E1E0CC] font-bold text-lg tracking-tight">
+          <img src="/Miiso.png" alt="Miiso" className="h-12 w-auto object-contain scale-125 ml-1" />
+          <span className="z-10">Miiso</span>
         </Link>
         
         {/* App Links — only shown when connected */}
