@@ -3,13 +3,11 @@ import { whitelist, permissionsRegistry, approvalCache, protectionEvents } from 
 import { getAddress } from "viem";
 import { logger } from "../src/utils/logger.js";
 
-// Standard safe/whitelisted contracts on Base
+// Base Sepolia — whitelisted safe contracts (false positive guard)
 const INITIAL_WHITELIST = [
-  { address: "0x330BB6C0b41da11a2f9Ec0F9F4F23371d53cf3EE", name: "Uniswap V3 Factory" },
-  { address: "0x1238536071E1c67aEE11f38e347711Caf70209e7", name: "Safe Proxy Factory" },
-  { address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", name: "USDC Token" },
-  { address: "0x4200000000000000000000000000000000000006", name: "WETH Token" },
-  { address: "0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d", name: "Chainlink Price Feed Oracle" }
+  { address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", name: "USDC (Base Sepolia)" },
+  { address: "0x4200000000000000000000000000000000000006", name: "WETH (Base)" },
+  { address: "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24", name: "Uniswap V2 Router (Base Sepolia)" },
 ];
 
 // Demo User setup matching typical Anvil addresses for immediate frontend local-host preview
@@ -64,7 +62,7 @@ async function seed() {
       .insert(approvalCache)
       .values({
         userAddress: DEMO_USER.address,
-        tokenAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913".toLowerCase(), // USDC
+        tokenAddress: "0x036CbD53842c5426634e7929541eC2318f3dCF7e".toLowerCase(), // USDC Sepolia
         spenderAddress: "0x88e6A0c2dDD26FEEb64F039a2c41296fcB3f5640".toLowerCase(), // Spender
         allowance: "50000000", // $50 USDC
         lastScannedBlock: 12000000n,

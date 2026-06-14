@@ -3,6 +3,7 @@ import { getAddress } from "viem";
 import { fetchBytecodeWithRetry } from "../../daemon/bytecodeRetry.js";
 import { decompileContract } from "../../daemon/heimdall.js";
 import { runOrchestrator } from "../../agents/orchestrator.js";
+import { isWhitelisted } from "../../security/whitelist.js";
 import { resolveProxyImplementation } from "../../daemon/proxyResolver.js";
 
 export async function analyzeRoutes(fastify: FastifyInstance) {
@@ -21,6 +22,23 @@ export async function analyzeRoutes(fastify: FastifyInstance) {
     }
 
     try {
+      // Skip known-safe protocols (false positive guard)
+      if (isWhitelisted(normalizedAddress)) {
+        return reply.send({
+          success: true,
+          data: {
+            contractAddress: normalizedAddress,
+            skipped: true,
+            reason: "whitelisted",
+            combinedConfidence: 0,
+            staticRisks: [],
+            veniceConfidenceVerdict: "Whitelisted — no analysis",
+            score: 100,
+            totalCostUsdc: 0,
+          },
+        });
+      }
+
       const targetAddress = await resolveProxyImplementation(normalizedAddress);
       
       const bytecode = await fetchBytecodeWithRetry(targetAddress);
