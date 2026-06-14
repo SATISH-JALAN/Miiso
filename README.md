@@ -18,8 +18,9 @@
   <a href="https://miiso-ai.vercel.app/">Frontend</a> ·
   <a href="https://miiso.onrender.com/api/health">Backend</a> ·
   <a href="#architecture">Architecture</a> ·
-  <a href="#getting-started">Getting Started</a> ·
-  <a href="#deployment">Deployment</a>
+  <a href="#features">Features</a> ·
+  <a href="#try-it-live">Try It Live</a> ·
+  <a href="#getting-started">Getting Started</a>
 </p>
 
 ---
@@ -50,6 +51,102 @@ Deploy → Detect → Decompile → Analyze → Route → Revoke → Confirm
 | **Frontend** | [miiso-ai.vercel.app](https://miiso-ai.vercel.app/) |
 | **Backend API** | [miiso.onrender.com](https://miiso.onrender.com) |
 | **Health check** | [GET /api/health](https://miiso.onrender.com/api/health) |
+
+---
+
+## Features
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### Real-time block surveillance
+Watches every new contract deployment on Base Sepolia via WebSocket RPC. Proxy contracts resolved through EIP-1967 before analysis begins.
+
+### AI threat intelligence
+Bytecode is decompiled with Heimdall-rs, then analyzed by Venice AI's uncensored model. Raw bytecode is never sent to the model — decompilation always comes first.
+
+### Three-tier confidence routing
+High-confidence threats revoke instantly. Medium threats get a 60-second veto window. Low-confidence findings are logged — you stay in control.
+
+</td>
+<td width="50%" valign="top">
+
+### Least-privilege permissions
+One scoped ERC-7715 delegation: `approve(spender, 0)` only. The `ApprovalRevocationEnforcer` rejects every other action on-chain.
+
+### Zero ETH gas
+All relay transactions settle through 1Shot in USDC. No ETH balance required to stay protected.
+
+### Live dashboard + SSE
+PostgreSQL LISTEN/NOTIFY pushes events to your browser in under 4 seconds. Veto timers, scan feed, and tx confirmations update in real time.
+
+</td>
+</tr>
+</table>
+
+### What Miiso can — and cannot — do
+
+| | Allowed | Blocked |
+|---|:---:|:---:|
+| Revoke token approvals (`approve(0)`) | ✅ | |
+| Transfer your tokens | | ❌ |
+| Swap or bridge assets | | ❌ |
+| Approve new spenders | | ❌ |
+| Exceed your USDC budget cap | | ❌ |
+| Act on whitelisted protocols | | ❌ |
+
+---
+
+## Try it live
+
+No install required — the full product is running on Base Sepolia.
+
+```mermaid
+flowchart LR
+    A[Connect Wallet] --> B[Complete Setup]
+    B --> C[Grant Permission]
+    C --> D[Open Dashboard]
+    D --> E[Watch Live Scans]
+    E --> F{Threat?}
+    F -->|Yes| G[Auto-revoke or Veto]
+    F -->|No| H[Stay Protected]
+```
+
+| Step | Action | What happens |
+|------|--------|--------------|
+| **1** | Visit [miiso-ai.vercel.app](https://miiso-ai.vercel.app/) | Landing page loads |
+| **2** | Connect MetaMask on **Base Sepolia** | Wallet linked, SSE stream opens |
+| **3** | Run the **Setup wizard** (~2 min) | EIP-7702 upgrade → ERC-7715 permission → fee hook approval |
+| **4** | Open **Dashboard** | Live network scans, approval cache, protection history |
+| **5** | Wait for a threat — or use **Research** | Analyze any contract on demand |
+
+> **Demo tip:** Deploy the honeypot test contract (`pnpm deploy:honeypot`) and watch the pipeline detect, analyze, and route the threat in under 10 seconds.
+
+---
+
+## Performance
+
+End-to-end pipeline benchmarks on Base Sepolia testnet:
+
+| Stage | Typical latency |
+|-------|----------------|
+| Block detection | ~180ms after inclusion |
+| Bytecode fetch + proxy resolve | ~250ms–1s (with retry backoff) |
+| Heimdall decompilation | ~2–8s (worker pool, 30s hard timeout) |
+| Venice AI analysis | ~3–5s (SIWE x402 auth) |
+| 1Shot relay submission | ~1–2s |
+| Webhook → dashboard update | < 4s via SSE |
+| **Full pipeline** | **< 10s** deploy → revoke |
+
+| Metric | Value |
+|--------|-------|
+| Chain | Base Sepolia (84532) |
+| Confidence model | Venice AI + static bytecode analysis |
+| Tier 1 threshold | ≥ 85% — instant revoke |
+| Tier 2 threshold | 70–84% — 60s veto window |
+| Relay cost | ~$0.01 USDC per transaction |
+| Success fee | 1.5% of protected value |
 
 ---
 
@@ -292,10 +389,11 @@ pnpm install
 
 ```bash
 cd backend
-cp .env.example .env        # fill in your values
 node scripts/enable-pgvector.js
 npx drizzle-kit push
 ```
+
+Copy `backend/.env.example` and `frontend/.env.example` to configure local credentials before starting.
 
 ### Run locally
 
@@ -319,54 +417,6 @@ pnpm deploy:honeypot         # deploy test drainer to Base Sepolia
 
 ---
 
-## Environment variables
-
-### Backend (`backend/.env`)
-
-```env
-# Database
-DATABASE_URL=postgresql://...@ep-xxx.neon.tech/miiso?sslmode=require
-
-# Blockchain — Base Sepolia
-ALCHEMY_WSS_URL=wss://base-sepolia.g.alchemy.com/v2/YOUR_KEY
-HTTP_RPC_URL=https://base-sepolia.g.alchemy.com/v2/YOUR_KEY
-
-# Agent session key (fund with USDC on Base Sepolia)
-AGENT_PRIVATE_KEY=0x...
-AGENT_ADDRESS=0x...
-
-# Venice AI
-VENICE_API_KEY=your_key
-VENICE_API_URL=https://api.venice.ai/api/v1
-
-# 1Shot Relayer
-ONESHOT_RELAYER_URL=https://relayer.1shotapi.dev/relayers
-ONESHOT_WEBHOOK_PUBLIC_KEY=your_ed25519_public_key
-PUBLIC_WEBHOOK_URL=https://your-backend.onrender.com/api/webhooks/1shot
-
-# MetaMask Smart Accounts — Base Sepolia
-DELEGATION_MANAGER_ADDRESS=0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3
-APPROVAL_REVOCATION_ENFORCER=0x0a1BE1E7c3838e9B3D803Be3C946c6E5abC6B6DA
-SUCCESS_FEE_HOOK=0xc0C360C4B1DF47CE001DDDEBa857e23aEBF40A33
-
-# Server
-NODE_ENV=production
-PORT=3001
-DEMO_MODE=false
-```
-
-### Frontend (`frontend/.env`)
-
-```env
-VITE_BACKEND_URL=http://localhost:3001
-VITE_USDC_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e
-VITE_ONESHOT_RELAYER_URL=https://relayer.1shotapi.dev/relayers
-VITE_SUCCESS_FEE_HOOK=0xc0C360C4B1DF47CE001DDDEBa857e23aEBF40A33
-VITE_DELEGATION_MANAGER_ADDRESS=0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3
-```
-
----
-
 ## API reference
 
 | Method | Endpoint | Description |
@@ -383,30 +433,6 @@ VITE_DELEGATION_MANAGER_ADDRESS=0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3
 | `POST` | `/api/analyze` | On-demand contract analysis |
 | `POST` | `/api/webhooks/1shot` | 1Shot relay confirmation (Ed25519) |
 | `GET` | `/api/relay/capabilities` | 1Shot fee + relayer info |
-
----
-
-## Deployment
-
-```mermaid
-flowchart LR
-    GH[GitHub Repo] --> VERCEL[Vercel<br/>frontend/]
-    GH --> RENDER[Render<br/>backend/]
-    VERCEL -->|VITE_BACKEND_URL| RENDER
-    RENDER --> NEON[(Neon Postgres)]
-    RENDER --> RPC[Alchemy WSS]
-    ONESHOT[1Shot] -->|webhook| RENDER
-```
-
-| | Vercel (Frontend) | Render (Backend) |
-|---|---|---|
-| **Root directory** | `frontend` | `backend` |
-| **Build** | `pnpm install && pnpm build` | `pnpm install && pnpm run build` |
-| **Start** | — (static) | `pnpm start` |
-| **Output** | `dist/` | `dist/src/index.js` |
-| **Key env** | `VITE_BACKEND_URL` | `DATABASE_URL`, `PUBLIC_WEBHOOK_URL`, `AGENT_PRIVATE_KEY` |
-
-> **Tip:** Set `NODE_ENV=production` on Render to suppress debug logs. Use a **Starter** instance or higher — the block watcher must stay always-on.
 
 ---
 
