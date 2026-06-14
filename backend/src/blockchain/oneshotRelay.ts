@@ -6,8 +6,9 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const ONESHOT_RELAYER_URL =
-  process.env.ONESHOT_RELAYER_URL || "https://relayer.1shotapi.com/rpc";
+  process.env.ONESHOT_RELAYER_URL || "https://relayer.1shotapi.dev/relayers";
 
+const DEFAULT_FEE_USDC = 10_000n; // ~$0.01 USDC when minFee absent from API
 const GAS_ESTIMATE_UPGRADE = 65_000n;
 const FEE_MULTIPLIER_NUM = 12n;
 const FEE_MULTIPLIER_DEN = 10n;
@@ -32,7 +33,16 @@ export interface Upgrade7702Payload {
   }>;
 }
 
-async function jsonRpc<T>(method: string, params: unknown[]): Promise<T> {
+interface ChainCapabilities {
+  feeCollector: string;
+  targetAddress?: string;
+  tokens?: Array<{ address: string; symbol: string; decimals: string }>;
+}
+
+async function jsonRpc<T>(
+  method: string,
+  params: unknown[] | Record<string, unknown>
+): Promise<T> {
   const response = await fetch(ONESHOT_RELAYER_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -59,13 +69,22 @@ async function jsonRpc<T>(method: string, params: unknown[]): Promise<T> {
  * Fetches 1Shot relayer capabilities and computes the USDC fee for an upgrade tx.
  */
 export async function getRelayerCapabilities(): Promise<RelayerCapabilities> {
-  const capJson = await jsonRpc<{
-    feeCollector: string;
-    minFee: string;
-    feeToken: string;
-  }>("relayer_getCapabilities", []);
+  const capJson = await jsonRpc<Record<string, ChainCapabilities>>(
+    "relayer_getCapabilities",
+    [String(CHAIN_ID)]
+  );
 
-  const minFee = BigInt(capJson.minFee);
+  const chainCaps = capJson[String(CHAIN_ID)];
+  if (!chainCaps?.feeCollector) {
+    throw new Error(`No capabilities returned for chain ${CHAIN_ID}`);
+  }
+
+  const minFee = DEFAULT_FEE_USDC;
+  const feeToken =
+    chainCaps.tokens?.[0]?.address ??
+    process.env.USDC_ADDRESS ??
+    "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+
   const gasPrice = await publicClient.getGasPrice();
   const feeRaw =
     (GAS_ESTIMATE_UPGRADE * gasPrice * FEE_MULTIPLIER_NUM) /
@@ -74,12 +93,42 @@ export async function getRelayerCapabilities(): Promise<RelayerCapabilities> {
   const effectiveFee = feeRaw > minFee ? feeRaw : minFee;
 
   return {
-    feeCollector: capJson.feeCollector,
+    feeCollector: chainCaps.feeCollector,
     minFee,
-    feeToken: capJson.feeToken,
+    feeToken,
     feeUsdc: Number(effectiveFee) / 1_000_000,
     effectiveFee,
   };
+}
+
+/**
+ * Polls relayer_getStatus until txHash is available or task fails.
+ */
+export async function pollRelayerTaskStatus(
+  taskId: string,
+  maxAttempts = 30,
+  intervalMs = 2000
+): Promise<{ txHash: string; status: number }> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const result = await jsonRpc<{
+      status: number;
+      txHash?: string;
+    }>("relayer_getStatus", { taskId });
+
+    if (result.txHash && (result.status === 110 || result.status === 200)) {
+      return { txHash: result.txHash, status: result.status };
+    }
+
+    if (result.status >= 400) {
+      throw new Error(`Relayer task failed with status ${result.status}`);
+    }
+
+    if (i < maxAttempts - 1) {
+      await new Promise((r) => setTimeout(r, intervalMs));
+    }
+  }
+
+  throw new Error(`Relayer task ${taskId} timed out waiting for txHash`);
 }
 
 /**
@@ -111,8 +160,16 @@ export async function submit7702Upgrade(
   for (const method of methods) {
     try {
       logger.info(`[1Shot] Submitting EIP-7702 upgrade via ${method}...`);
-      const result = await jsonRpc<{ txHash: string }>(method, [baseParams]);
-      const txHash = result?.txHash;
+      const result = await jsonRpc<{ txHash?: string; taskId?: string }>(
+        method,
+        baseParams
+      );
+
+      let txHash = result?.txHash;
+      if (!txHash && result?.taskId) {
+        const polled = await pollRelayerTaskStatus(result.taskId);
+        txHash = polled.txHash;
+      }
       if (!txHash) throw new Error("No txHash in relayer response");
 
       logger.info(
