@@ -295,7 +295,7 @@ export function Setup() {
           setStep(1);
           window.location.reload();
         }}
-        className="mt-4 text-sm text-[#19C978] hover:text-[#14a361] transition-colors font-medium"
+        className="mt-4 text-sm text-[#B8CFA8] hover:text-[#14a361] transition-colors font-medium"
       >
         I've installed Flask — retry detection →
       </button>
@@ -307,7 +307,7 @@ export function Setup() {
       {/* Progress Bar */}
       <div className="w-full flex items-center justify-center gap-2 mb-12">
         {[1, 2, 3, 4, 5].map(i => (
-          <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-[#19C978]' : 'bg-white/10'}`} />
+          <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-[#B8CFA8]' : 'bg-white/10'}`} />
         ))}
       </div>
 
@@ -319,9 +319,9 @@ export function Setup() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6"
+              className="bg-[#C27A73]/10 border border-red-500/20 rounded-xl p-4 mb-6"
             >
-              <p className="text-sm text-[#EF4444]">{error}</p>
+              <p className="text-sm text-[#C27A73]">{error}</p>
               <button onClick={() => setError(null)} className="text-xs text-gray-400 mt-2 hover:text-white">
                 Dismiss
               </button>
@@ -349,7 +349,7 @@ export function Setup() {
               
               <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-8 w-full text-left">
                 <p className="text-sm text-gray-400">Miiso requires MetaMask Flask for ERC-7715 permissions.</p>
-                <p className="text-sm text-[#19C978] mt-1">No ETH needed. Miiso uses USDC for gas via 1Shot Relayer.</p>
+                <p className="text-sm text-[#B8CFA8] mt-1">No ETH needed. Miiso uses USDC for gas via 1Shot Relayer.</p>
               </div>
 
               <button 
@@ -375,10 +375,10 @@ export function Setup() {
               <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Smart Account Upgrade</h2>
               <p className="text-primary opacity-70 mb-4 max-w-sm">
                 Your wallet needs a one-time upgrade to a smart account via the 1Shot relayer.
-                Estimated fee: <strong className="text-[#19C978]">${estimatedRelayFee.toFixed(2)} USDC</strong>. No ETH needed.
+                Estimated fee: <strong className="text-[#B8CFA8]">${estimatedRelayFee.toFixed(2)} USDC</strong>. No ETH needed.
               </p>
 
-              <div className="bg-[#19C978]/5 border border-[#19C978]/20 rounded-xl p-4 mb-6 w-full text-left text-xs text-gray-400 space-y-2">
+              <div className="bg-[#B8CFA8]/5 border border-[#B8CFA8]/20 rounded-xl p-4 mb-6 w-full text-left text-xs text-gray-400 space-y-2">
                 <p>• Gas paid in USDC through 1Shot relayer</p>
                 <p>• Your wallet address stays the same</p>
                 <p>• Your funds stay exactly where they are</p>
@@ -388,7 +388,7 @@ export function Setup() {
               {walletAddress && (
                 <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-6 w-full text-center">
                   <span className="text-xs text-gray-400">Wallet Connected: </span>
-                  <span className="text-xs font-mono text-[#19C978]">{formatAddr(walletAddress)}</span>
+                  <span className="text-xs font-mono text-[#B8CFA8]">{formatAddr(walletAddress)}</span>
                 </div>
               )}
               
@@ -415,8 +415,8 @@ export function Setup() {
               </p>
 
               {nativeGrantAvailable === true ? (
-                <div className="bg-[#19C978]/5 border border-[#19C978]/20 rounded-xl p-4 mb-6 w-full text-left text-xs">
-                  <p className="text-[#19C978] font-semibold mb-1">Native ERC-7715 permission screen</p>
+                <div className="bg-[#B8CFA8]/5 border border-[#B8CFA8]/20 rounded-xl p-4 mb-6 w-full text-left text-xs">
+                  <p className="text-[#B8CFA8] font-semibold mb-1">Native ERC-7715 permission screen</p>
                   <p className="text-gray-400 leading-relaxed">
                     MetaMask Flask will show the scoped Advanced Permission UI — approve(token, 0) only,
                     with your budget cap and expiry visible.
@@ -435,22 +435,22 @@ export function Setup() {
               
               <div className="space-y-6 w-full text-left mb-8">
                 {/* Permission scope — clear and honest */}
-                <div className="bg-black/60 p-5 rounded-xl border border-[#19C978]/20 font-mono text-xs space-y-3">
+                <div className="bg-black/60 p-5 rounded-xl border border-[#B8CFA8]/20 font-mono text-xs space-y-3">
                   <div className="flex justify-between border-b border-white/5 pb-2">
                     <span className="text-gray-500">What Miiso CAN do</span>
-                    <span className="text-[#19C978] font-bold">Revoke token approvals only</span>
+                    <span className="text-[#B8CFA8] font-bold">Revoke token approvals only</span>
                   </div>
                   <div className="flex justify-between border-b border-white/5 pb-2">
                     <span className="text-gray-500">Transfer funds</span>
-                    <span className="text-[#EF4444]">Never</span>
+                    <span className="text-[#C27A73]">Never</span>
                   </div>
                   <div className="flex justify-between border-b border-white/5 pb-2">
                     <span className="text-gray-500">Swap tokens</span>
-                    <span className="text-[#EF4444]">Never</span>
+                    <span className="text-[#C27A73]">Never</span>
                   </div>
                   <div className="flex justify-between border-b border-white/5 pb-2">
                     <span className="text-gray-500">Touch your balance</span>
-                    <span className="text-[#EF4444]">Never</span>
+                    <span className="text-[#C27A73]">Never</span>
                   </div>
                   <div className="flex justify-between border-b border-white/5 pb-2">
                     <span className="text-gray-500">Duration</span>
@@ -470,7 +470,7 @@ export function Setup() {
                 <div className="bg-black/40 border border-white/5 p-5 rounded-2xl">
                   <div className="flex justify-between items-center mb-3">
                     <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Monthly USDC Budget Cap</label>
-                    <span className="text-[#19C978] font-mono font-bold text-sm">{budgetCap} USDC</span>
+                    <span className="text-[#B8CFA8] font-mono font-bold text-sm">{budgetCap} USDC</span>
                   </div>
                   <input 
                     type="range" 
@@ -479,7 +479,7 @@ export function Setup() {
                     step="1" 
                     value={budgetCap} 
                     onChange={(e) => setBudgetCap(Number(e.target.value))}
-                    className="w-full accent-[#19C978] bg-white/10 rounded-lg h-1.5 cursor-pointer"
+                    className="w-full accent-[#B8CFA8] bg-white/10 rounded-lg h-1.5 cursor-pointer"
                   />
                 </div>
 
@@ -487,7 +487,7 @@ export function Setup() {
                 <div className="bg-black/40 border border-white/5 p-5 rounded-2xl">
                   <div className="flex justify-between items-center mb-3">
                     <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Permission Duration</label>
-                    <span className="text-[#19C978] font-mono font-bold text-sm">{durationOptions.find(d => d.days === durationDays)?.label || `${durationDays} days`}</span>
+                    <span className="text-[#B8CFA8] font-mono font-bold text-sm">{durationOptions.find(d => d.days === durationDays)?.label || `${durationDays} days`}</span>
                   </div>
                   <div className="grid grid-cols-4 gap-2">
                     {durationOptions.map((opt) => (
@@ -496,7 +496,7 @@ export function Setup() {
                         onClick={() => setDurationDays(opt.days)}
                         className={`py-2 px-3 rounded-lg text-xs font-medium transition-all ${
                           durationDays === opt.days
-                            ? 'bg-[#19C978]/20 border border-[#19C978]/50 text-[#19C978]'
+                            ? 'bg-[#B8CFA8]/20 border border-[#B8CFA8]/50 text-[#B8CFA8]'
                             : 'bg-black/60 border border-white/5 text-gray-400 hover:border-white/20 hover:text-[#E1E0CC]'
                         }`}
                       >
@@ -515,11 +515,11 @@ export function Setup() {
                       placeholder="Paste contract address (0x...)" 
                       value={newWhitelistAddress}
                       onChange={(e) => setNewWhitelistAddress(e.target.value)}
-                      className="flex-1 bg-black p-2.5 rounded-lg border border-white/5 text-[#E1E0CC] font-mono text-xs placeholder-gray-600 focus:outline-none focus:border-[#19C978]/50"
+                      className="flex-1 bg-black p-2.5 rounded-lg border border-white/5 text-[#E1E0CC] font-mono text-xs placeholder-gray-600 focus:outline-none focus:border-[#B8CFA8]/50"
                     />
                     <button 
                       onClick={handleAddWhitelist}
-                      className="bg-[#19C978] text-black px-3.5 rounded-lg text-xs font-bold hover:bg-[#14a361] transition-colors flex items-center gap-1"
+                      className="bg-[#B8CFA8] text-black px-3.5 rounded-lg text-xs font-bold hover:bg-[#14a361] transition-colors flex items-center gap-1"
                     >
                       <Plus className="w-3.5 h-3.5" /> Add
                     </button>
@@ -532,7 +532,7 @@ export function Setup() {
                           <span className="font-mono text-[10px] text-[#E1E0CC]">{addr}</span>
                           <button 
                             onClick={() => handleRemoveWhitelist(idx)}
-                            className="text-gray-500 hover:text-[#EF4444] transition-colors"
+                            className="text-gray-500 hover:text-[#C27A73] transition-colors"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -582,7 +582,7 @@ export function Setup() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Charged when</span>
-                  <span className="text-[#19C978]">Only after confirmed protection</span>
+                  <span className="text-[#B8CFA8]">Only after confirmed protection</span>
                 </div>
               </div>
 
@@ -615,28 +615,28 @@ export function Setup() {
               animate={{ opacity: 1, scale: 1 }}
               className="flex flex-col items-center text-center"
             >
-              <div className="w-20 h-20 bg-[#19C978]/10 rounded-full flex items-center justify-center mb-6">
-                <CheckCircle className="w-10 h-10 text-[#19C978]" />
+              <div className="w-20 h-20 bg-[#B8CFA8]/10 rounded-full flex items-center justify-center mb-6">
+                <CheckCircle className="w-10 h-10 text-[#B8CFA8]" />
               </div>
               <h2 className="text-2xl md:text-3xl text-[#E1E0CC] mb-4">Miiso is Active</h2>
-              <p className="text-[#19C978] mb-8 max-w-sm font-semibold tracking-wide">
+              <p className="text-[#B8CFA8] mb-8 max-w-sm font-semibold tracking-wide">
                 We are watching Base for you. 24/7.
               </p>
               
               <div className="space-y-4 text-left w-full max-w-xs mb-8">
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-[#19C978]" />
+                  <CheckCircle className="w-5 h-5 text-[#B8CFA8]" />
                   <span className="text-[#E1E0CC]">Smart account active</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-[#19C978]" />
+                  <CheckCircle className="w-5 h-5 text-[#B8CFA8]" />
                   <span className="text-[#E1E0CC]">
                     {displayGrantMethod ?? "Protection permission granted"}
                   </span>
                 </div>
                 {upgradeMethod && (
                   <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-[#19C978]" />
+                    <CheckCircle className="w-5 h-5 text-[#B8CFA8]" />
                     <span className="text-[#E1E0CC]">
                       Upgrade via {upgradeMethod}
                       {upgradeFee != null && upgradeFee > 0 ? ` ($${upgradeFee.toFixed(2)} USDC)` : ""}
@@ -644,7 +644,7 @@ export function Setup() {
                   </div>
                 )}
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-[#19C978]" />
+                  <CheckCircle className="w-5 h-5 text-[#B8CFA8]" />
                   <span className="text-[#E1E0CC]">Sentinel scanning active</span>
                 </div>
               </div>

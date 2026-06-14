@@ -76,7 +76,7 @@ export function Alerts() {
     return (
       <div className="pt-32 pb-24 px-4 sm:px-6 max-w-md mx-auto min-h-screen flex flex-col justify-center items-center">
         <div className="bg-[#101010] p-8 rounded-3xl border border-white/5 text-center w-full shadow-2xl">
-          <ShieldAlert className="w-16 h-16 text-[#19C978] mx-auto mb-6 animate-pulse" />
+          <ShieldAlert className="w-16 h-16 text-[#B8CFA8] mx-auto mb-6 animate-pulse" />
           <h2 className="text-[#E1E0CC] font-bold text-2xl mb-2 tracking-tight">Connect Wallet</h2>
           <p className="text-gray-400 text-sm mb-6 leading-relaxed">
             Please connect your wallet to view active alerts and pending security cooldown actions.
@@ -89,7 +89,7 @@ export function Alerts() {
   return (
     <div className="pt-28 pb-24 px-4 sm:px-6 max-w-5xl mx-auto min-h-screen">
       <h1 className="text-3xl text-[#E1E0CC] font-medium mb-12 flex items-center gap-3">
-        <Bell className="w-8 h-8 opacity-50 text-[#19C978]" />
+        <Bell className="w-8 h-8 opacity-50 text-[#B8CFA8]" />
         Alerts & Notifications
       </h1>
 
@@ -117,7 +117,7 @@ export function Alerts() {
                     onClick={() => setToggles((prev: any) => ({ ...prev, [toggle.id]: !prev[toggle.id as keyof typeof toggles] }))}
                     aria-label={`Toggle ${toggle.label}`}
                     title={`Toggle ${toggle.label}`}
-                    className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${toggles[toggle.id as keyof typeof toggles] ? 'bg-[#19C978]' : 'bg-white/10'}`}
+                    className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${toggles[toggle.id as keyof typeof toggles] ? 'bg-[#B8CFA8]' : 'bg-white/10'}`}
                   >
                     <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${toggles[toggle.id as keyof typeof toggles] ? 'translate-x-5' : 'translate-x-0'}`} />
                   </button>
@@ -178,10 +178,10 @@ export function Alerts() {
                   
                   if (isVetoed) {
                     statusText = "VETOED";
-                    statusColor = "bg-red-500/10 text-[#EF4444]";
+                    statusColor = "bg-[#C27A73]/10 text-[#C27A73]";
                   } else if (log.relayStatus === "confirmed") {
                     statusText = "REVOKED";
-                    statusColor = "bg-[#19C978]/10 text-[#19C978]";
+                    statusColor = "bg-[#B8CFA8]/10 text-[#B8CFA8]";
                   } else if (log.relayStatus === "pending") {
                     statusText = "PENDING";
                     statusColor = "bg-[#F59E0B]/10 text-[#F59E0B]";
@@ -208,7 +208,7 @@ export function Alerts() {
                         </div>
                         <button
                           onClick={() => setSelectedThreat(log)}
-                          className="text-[10px] text-[#19C978] hover:text-[#14a361] transition-colors flex items-center gap-1 font-sans font-bold pt-1"
+                          className="text-[10px] text-[#B8CFA8] hover:text-[#14a361] transition-colors flex items-center gap-1 font-sans font-bold pt-1"
                         >
                           <HelpCircle className="w-3.5 h-3.5" /> Explain Threat
                         </button>
@@ -238,8 +238,8 @@ export function Alerts() {
             >
               {/* Header */}
               <div className="p-6 border-b border-white/5 bg-[#101010] flex justify-between items-center">
-                <div className="flex items-center gap-2 text-[#EF4444]">
-                  <Shield className="w-5 h-5 text-[#19C978]" />
+                <div className="flex items-center gap-2 text-[#C27A73]">
+                  <Shield className="w-5 h-5 text-[#B8CFA8]" />
                   <span className="font-bold text-sm tracking-widest uppercase text-[#E1E0CC]">Venice Threat Explainer</span>
                 </div>
                 <button 
@@ -264,13 +264,13 @@ export function Alerts() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-[#101010] p-3 rounded-lg border border-white/5">
                     <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Threat Score</label>
-                    <span className="text-lg font-bold font-mono text-[#EF4444]">
+                    <span className="text-lg font-bold font-mono text-[#C27A73]">
                       {selectedThreat.confidence ? `${(parseFloat(selectedThreat.confidence) * 100).toFixed(1)}%` : (selectedThreat.severity === "high" ? "98.7%" : "72.4%")}
                     </span>
                   </div>
                   <div className="bg-[#101010] p-3 rounded-lg border border-white/5">
                     <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Static Risk Tier</label>
-                    <span className={`text-lg font-bold capitalize ${selectedThreat.severity === 'high' ? 'text-[#EF4444]' : 'text-[#F59E0B]'}`}>
+                    <span className={`text-lg font-bold capitalize ${selectedThreat.severity === 'high' ? 'text-[#C27A73]' : 'text-[#F59E0B]'}`}>
                       {selectedThreat.staticRisk || selectedThreat.severity}
                     </span>
                   </div>
@@ -282,7 +282,7 @@ export function Alerts() {
                     <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Static Analysis Flags</label>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {selectedThreat.staticFlags.map((flag: string, idx: number) => (
-                        <span key={idx} className="bg-red-500/10 text-[#EF4444] border border-red-500/10 px-2 py-0.5 rounded text-[10px] font-mono font-semibold">
+                        <span key={idx} className="bg-[#C27A73]/10 text-[#C27A73] border border-red-500/10 px-2 py-0.5 rounded text-[10px] font-mono font-semibold">
                           {flag}
                         </span>
                       ))}
@@ -291,11 +291,11 @@ export function Alerts() {
                 )}
 
                 {/* Plain English Venice Explainer */}
-                <div className="border border-[#19C978]/20 bg-[#19C978]/5 p-4 rounded-xl">
+                <div className="border border-[#B8CFA8]/20 bg-[#B8CFA8]/5 p-4 rounded-xl">
                   <div className="flex items-start gap-2.5">
-                    <Info className="w-5 h-5 text-[#19C978] shrink-0 mt-0.5" />
+                    <Info className="w-5 h-5 text-[#B8CFA8] shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-[#19C978] font-bold text-xs uppercase tracking-wider mb-1">Natural Language AI Report</h4>
+                      <h4 className="text-[#B8CFA8] font-bold text-xs uppercase tracking-wider mb-1">Natural Language AI Report</h4>
                       <p className="text-gray-300 text-sm leading-relaxed font-sans">
                         {selectedThreat.explainer || "This contract was flagged due to abnormal static risk pattern checks. Manual audit recommended."}
                       </p>
@@ -308,7 +308,7 @@ export function Alerts() {
               <div className="p-4 bg-[#101010] border-t border-white/5 flex justify-end">
                 <button
                   onClick={() => setSelectedThreat(null)}
-                  className="bg-[#19C978] hover:bg-[#14a361] text-black font-semibold text-xs py-2 px-5 rounded-full transition-colors"
+                  className="bg-[#B8CFA8] hover:bg-[#14a361] text-black font-semibold text-xs py-2 px-5 rounded-full transition-colors"
                 >
                   Close
                 </button>

@@ -117,15 +117,15 @@ export function PermissionTrust() {
           <FadeIn delay={0.3} className="bg-[#101010] p-8 md:p-12 rounded-2xl border border-white/5 font-mono text-xs sm:text-sm">
             <div className="flex justify-between items-center py-4 border-b border-white/5">
               <span className="text-gray-500">Function allowed</span>
-              <span className="text-[#19C978]">revoke token approval only</span>
+              <span className="text-[#B8CFA8]">revoke token approval only</span>
             </div>
             <div className="flex justify-between items-center py-4 border-b border-white/5">
               <span className="text-gray-500">Can transfer funds</span>
-              <span className="text-[#EF4444]">never</span>
+              <span className="text-[#C27A73]">never</span>
             </div>
             <div className="flex justify-between items-center py-4 border-b border-white/5">
               <span className="text-gray-500">Can swap tokens</span>
-              <span className="text-[#EF4444]">never</span>
+              <span className="text-[#C27A73]">never</span>
             </div>
             <div className="flex justify-between items-center py-4 border-b border-white/5">
               <span className="text-gray-500">Monthly budget cap</span>
@@ -171,7 +171,7 @@ export function StoryProof() {
           <FadeIn delay={0.3} className="bg-[#101010] p-8 md:p-12 rounded-2xl border border-white/5 font-mono text-xs sm:text-sm">
             <div className="flex justify-between items-center py-4 border-b border-white/5">
               <span className="text-gray-500">Assets protected</span>
-              <span className="text-[#19C978]">$7,000</span>
+              <span className="text-[#B8CFA8]">$7,000</span>
             </div>
             <div className="flex justify-between items-center py-4 border-b border-white/5">
               <span className="text-gray-500">Response time</span>
@@ -218,45 +218,45 @@ export function ComparisonTable() {
             <tbody className="text-sm md:text-base text-primary">
               <tr className="border-b border-white/5">
                 <td className="py-6 pr-6 opacity-80">Autonomous action</td>
-                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#19C978]" /></td>
-                <td className="py-6 px-6"><X className="w-5 h-5 text-[#EF4444]" /></td>
-                <td className="py-6 px-6"><X className="w-5 h-5 text-[#EF4444]" /></td>
-                <td className="py-6 pl-6"><X className="w-5 h-5 text-[#EF4444]" /></td>
+                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#B8CFA8]" /></td>
+                <td className="py-6 px-6"><X className="w-5 h-5 text-[#C27A73]" /></td>
+                <td className="py-6 px-6"><X className="w-5 h-5 text-[#C27A73]" /></td>
+                <td className="py-6 pl-6"><X className="w-5 h-5 text-[#C27A73]" /></td>
               </tr>
               <tr className="border-b border-white/5">
                 <td className="py-6 pr-6 opacity-80">Works while you sleep</td>
-                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#19C978]" /></td>
-                <td className="py-6 px-6"><X className="w-5 h-5 text-[#EF4444]" /></td>
+                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#B8CFA8]" /></td>
+                <td className="py-6 px-6"><X className="w-5 h-5 text-[#C27A73]" /></td>
                 <td className="py-6 px-6 text-gray-500 text-sm">Alerts only</td>
-                <td className="py-6 pl-6"><X className="w-5 h-5 text-[#EF4444]" /></td>
+                <td className="py-6 pl-6"><X className="w-5 h-5 text-[#C27A73]" /></td>
               </tr>
               <tr className="border-b border-white/5">
                 <td className="py-6 pr-6 opacity-80">Requires ETH for gas</td>
-                <td className="py-6 px-6"><X className="w-5 h-5 text-[#19C978]" /></td>
-                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#EF4444]" /></td>
+                <td className="py-6 px-6"><X className="w-5 h-5 text-[#B8CFA8]" /></td>
+                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#C27A73]" /></td>
                 <td className="py-6 px-6 text-gray-500">—</td>
-                <td className="py-6 pl-6"><X className="w-5 h-5 text-[#19C978]" /></td>
+                <td className="py-6 pl-6"><X className="w-5 h-5 text-[#B8CFA8]" /></td>
               </tr>
               <tr className="border-b border-white/5">
                 <td className="py-6 pr-6 opacity-80">AI-powered detection</td>
-                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#19C978]" /></td>
-                <td className="py-6 px-6"><X className="w-5 h-5 text-[#EF4444]" /></td>
+                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#B8CFA8]" /></td>
+                <td className="py-6 px-6"><X className="w-5 h-5 text-[#C27A73]" /></td>
                 <td className="py-6 px-6 text-gray-500 text-sm">Partial</td>
-                <td className="py-6 pl-6"><X className="w-5 h-5 text-[#EF4444]" /></td>
+                <td className="py-6 pl-6"><X className="w-5 h-5 text-[#C27A73]" /></td>
               </tr>
               <tr className="border-b border-white/5">
                 <td className="py-6 pr-6 opacity-80">Pay only when protected</td>
-                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#19C978]" /></td>
+                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#B8CFA8]" /></td>
                 <td className="py-6 px-6 text-gray-500 text-sm">Free</td>
                 <td className="py-6 px-6 text-gray-500 text-sm">Subscription</td>
                 <td className="py-6 pl-6 text-gray-500 text-sm">Premium upfront</td>
               </tr>
               <tr className="">
                 <td className="py-6 pr-6 opacity-80">No protocol integration</td>
-                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#19C978]" /></td>
-                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#19C978]" /></td>
-                <td className="py-6 px-6"><X className="w-5 h-5 text-[#EF4444]" /></td>
-                <td className="py-6 pl-6"><X className="w-5 h-5 text-[#EF4444]" /></td>
+                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#B8CFA8]" /></td>
+                <td className="py-6 px-6"><Check className="w-5 h-5 text-[#B8CFA8]" /></td>
+                <td className="py-6 px-6"><X className="w-5 h-5 text-[#C27A73]" /></td>
+                <td className="py-6 pl-6"><X className="w-5 h-5 text-[#C27A73]" /></td>
               </tr>
             </tbody>
           </table>

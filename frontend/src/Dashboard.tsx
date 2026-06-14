@@ -194,9 +194,9 @@ export function Dashboard() {
 
   const getRiskColor = (level: string) => {
     switch (level.toLowerCase()) {
-      case 'high': return 'text-[#EF4444]';
+      case 'high': return 'text-[#C27A73]';
       case 'medium': return 'text-[#F59E0B]';
-      case 'low': return 'text-[#19C978]';
+      case 'low': return 'text-[#B8CFA8]';
       default: return 'text-gray-500';
     }
   };
@@ -234,13 +234,13 @@ export function Dashboard() {
                 READ ONLY
               </div>
             ) : permissionExpiry.permissionExpired ? (
-              <div className="bg-red-500/10 text-[#EF4444] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                <div className="w-2 h-2 bg-[#EF4444] rounded-full" />
+              <div className="bg-[#C27A73]/10 text-[#C27A73] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                <div className="w-2 h-2 bg-[#C27A73] rounded-full" />
                 PERMISSION EXPIRED
               </div>
             ) : (
-              <div className="bg-[#19C978]/10 text-[#19C978] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                <div className="w-2 h-2 bg-[#19C978] rounded-full animate-pulse" />
+              <div className="bg-[#B8CFA8]/10 text-[#B8CFA8] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                <div className="w-2 h-2 bg-[#B8CFA8] rounded-full animate-pulse" />
                 PROTECTION ACTIVE
               </div>
             )}
@@ -253,7 +253,7 @@ export function Dashboard() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-8 text-sm">
             <div>
               <span className="text-gray-500 text-[10px] uppercase tracking-widest block mb-0.5">Permission Expiry</span>
-              <span className={`font-mono text-sm ${permissionExpiry.isExpired ? "text-[#EF4444]" : "text-[#E1E0CC]"}`}>
+              <span className={`font-mono text-sm ${permissionExpiry.isExpired ? "text-[#C27A73]" : "text-[#E1E0CC]"}`}>
                 {permissionExpiry.daysLeft}
               </span>
             </div>
@@ -265,7 +265,7 @@ export function Dashboard() {
             </div>
             <div className="col-span-2 sm:col-span-1">
               <span className="text-gray-500 text-[10px] uppercase tracking-widest block mb-0.5">USDC Budget Remaining</span>
-              <span className="text-[#19C978] font-mono text-sm">
+              <span className="text-[#B8CFA8] font-mono text-sm">
                 {formatBudget(String(resolvedBudget.remaining))} / {formatBudget(String(resolvedBudget.cap))} USDC
               </span>
             </div>
@@ -339,7 +339,7 @@ export function Dashboard() {
         <div className="xl:col-span-5 bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex flex-col min-h-[420px]">
           <SectionHeader
             title="Live Network Scans"
-            icon={<Activity className="w-4 h-4 text-[#19C978] animate-pulse" />}
+            icon={<Activity className="w-4 h-4 text-[#B8CFA8] animate-pulse" />}
           />
           <div className="p-3 flex-1 overflow-y-auto space-y-3 font-mono text-xs">
             {events.length === 0 ? (
@@ -355,26 +355,26 @@ export function Dashboard() {
                 
                 if (isClean) {
                   statusText = `CLEAN — ${log.exposedValue}`;
-                  statusColor = "bg-[#19C978]/10 text-[#19C978]";
+                  statusColor = "bg-[#B8CFA8]/10 text-[#B8CFA8]";
                 } else if (isVetoed) {
                   statusText = "VETOED";
-                  statusColor = "bg-red-500/10 text-[#EF4444]";
+                  statusColor = "bg-[#C27A73]/10 text-[#C27A73]";
                 } else if (log.relayStatus === "confirmed") {
                   statusText = "REVOKED";
-                  statusColor = "bg-[#19C978]/10 text-[#19C978]";
+                  statusColor = "bg-[#B8CFA8]/10 text-[#B8CFA8]";
                 } else if (log.relayStatus === "pending") {
                   statusText = "PENDING";
                   statusColor = "bg-[#F59E0B]/10 text-[#F59E0B]";
                 }
 
                 return (
-                  <div key={log.id} className={`bg-[#0B0B0C] p-3 rounded-lg border flex flex-col gap-2 ${isClean ? 'border-[#19C978]/20' : 'border-white/5'}`}>
+                  <div key={log.id} className={`bg-[#0B0B0C] p-3 rounded-lg border flex flex-col gap-2 ${isClean ? 'border-[#B8CFA8]/20' : 'border-white/5'}`}>
                     <div className="flex justify-between items-start">
                       <a 
                         href={`https://sepolia.basescan.org/address/${log.spenderAddress}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-gray-400 hover:text-[#19C978] cursor-pointer transition-colors underline decoration-white/20"
+                        className="text-gray-400 hover:text-[#B8CFA8] cursor-pointer transition-colors underline decoration-white/20"
                       >
                         {formatAddr(log.spenderAddress)}
                       </a>
@@ -383,7 +383,7 @@ export function Dashboard() {
                     
                     {!isClean && (
                       <div className="flex justify-between items-center">
-                        <span className={log.severity === "high" ? "text-[#EF4444]" : "text-[#F59E0B]"}>
+                        <span className={log.severity === "high" ? "text-[#C27A73]" : "text-[#F59E0B]"}>
                           {log.staticFlags && log.staticFlags.length > 0 
                             ? log.staticFlags[0].replace(/_/g, " ") 
                             : (isRevocation ? "Reentrancy" : "Dangerous Flow")}
@@ -401,7 +401,7 @@ export function Dashboard() {
                       {!isClean && (
                         <button 
                           onClick={() => setSelectedThreat(log)}
-                          className="text-[10px] text-[#19C978] hover:text-[#14a361] transition-colors flex items-center gap-1 font-sans font-semibold"
+                          className="text-[10px] text-[#B8CFA8] hover:text-[#14a361] transition-colors flex items-center gap-1 font-sans font-semibold"
                         >
                           <HelpCircle className="w-3 h-3" /> Why?
                         </button>
@@ -424,11 +424,11 @@ export function Dashboard() {
                   <button
                     onClick={handleBatchRevoke}
                     disabled={isBatchRevoking}
-                    className="bg-red-500/10 hover:bg-red-500/20 text-[#EF4444] border border-red-500/20 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-300 flex items-center gap-2 disabled:opacity-50"
+                    className="bg-[#C27A73]/10 hover:bg-[#C27A73]/20 text-[#C27A73] border border-red-500/20 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-300 flex items-center gap-2 disabled:opacity-50"
                   >
                     {isBatchRevoking ? (
                       <>
-                        <div className="w-3 h-3 border-2 border-t-transparent border-[#EF4444] rounded-full animate-spin" />
+                        <div className="w-3 h-3 border-2 border-t-transparent border-[#C27A73] rounded-full animate-spin" />
                         Securing...
                       </>
                     ) : (
@@ -474,7 +474,7 @@ export function Dashboard() {
                           <td className="px-6 font-medium text-[#E1E0CC]">{symbol}</td>
                           <td className="px-6">
                             <div className="flex items-center gap-2">
-                              <Shield className="w-4 h-4 text-[#19C978] fill-[#19C978]/10 animate-pulse" />
+                              <Shield className="w-4 h-4 text-[#B8CFA8] fill-[#B8CFA8]/10 animate-pulse" />
                               <div className="flex flex-col">
                                 <span className="font-semibold text-sm text-[#E1E0CC]">
                                   {row.spenderName || "Unknown Protocol"}
@@ -542,10 +542,10 @@ export function Dashboard() {
                       return (
                         <tr key={row.id} className="border-b border-white/5 hover:bg-white/2 transition-colors h-16">
                           <td className="px-6 text-gray-400">{new Date(row.createdAt).toLocaleString()}</td>
-                          <td className={`px-6 ${row.actionType === "revocation" ? "text-[#EF4444]" : "text-[#F59E0B]"}`}>
+                          <td className={`px-6 ${row.actionType === "revocation" ? "text-[#C27A73]" : "text-[#F59E0B]"}`}>
                             {row.actionType === "revocation" ? "Auto-revoked (Tier 1)" : "Veto Cooldown (Tier 2)"}
                           </td>
-                          <td className="px-6 text-[#19C978]">{formatValueSaved(row.exposedValue)}</td>
+                          <td className="px-6 text-[#B8CFA8]">{formatValueSaved(row.exposedValue)}</td>
                           <td className="px-6 text-gray-400">
                             {(row.actionType === "revocation" || (row.actionType === "veto" && row.relayStatus === "confirmed"))
                               ? formatFee(row.exposedValue)
@@ -591,7 +591,7 @@ export function Dashboard() {
             </p>
           </div>
           <div className="flex items-baseline gap-2 font-mono shrink-0">
-            <span className="text-[#19C978] text-2xl font-bold">
+            <span className="text-[#B8CFA8] text-2xl font-bold">
               ${formatBudget(String(resolvedBudget.spent))}
             </span>
             <span className="text-gray-500 text-sm">
@@ -607,7 +607,7 @@ export function Dashboard() {
           return (
             <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
               <div
-                className="bg-[#19C978] h-full rounded-full transition-all duration-500"
+                className="bg-[#B8CFA8] h-full rounded-full transition-all duration-500"
                 style={{ width: `${percent}%` }}
               />
             </div>
@@ -628,8 +628,8 @@ export function Dashboard() {
             >
               {/* Header */}
               <div className="p-6 border-b border-white/5 bg-[#101010] flex justify-between items-center">
-                <div className="flex items-center gap-2 text-[#EF4444]">
-                  <Shield className="w-5 h-5 text-[#19C978]" />
+                <div className="flex items-center gap-2 text-[#C27A73]">
+                  <Shield className="w-5 h-5 text-[#B8CFA8]" />
                   <span className="font-bold text-sm tracking-widest uppercase text-[#E1E0CC]">Venice Threat Explainer</span>
                 </div>
                 <button 
@@ -654,13 +654,13 @@ export function Dashboard() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-[#101010] p-3 rounded-lg border border-white/5">
                     <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Threat Score</label>
-                    <span className="text-lg font-bold font-mono text-[#EF4444]">
+                    <span className="text-lg font-bold font-mono text-[#C27A73]">
                       {selectedThreat.confidence ? `${(parseFloat(selectedThreat.confidence) * 100).toFixed(1)}%` : (selectedThreat.severity === "high" ? "98.7%" : "72.4%")}
                     </span>
                   </div>
                   <div className="bg-[#101010] p-3 rounded-lg border border-white/5">
                     <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Static Risk Tier</label>
-                    <span className={`text-lg font-bold capitalize ${selectedThreat.severity === 'high' ? 'text-[#EF4444]' : 'text-[#F59E0B]'}`}>
+                    <span className={`text-lg font-bold capitalize ${selectedThreat.severity === 'high' ? 'text-[#C27A73]' : 'text-[#F59E0B]'}`}>
                       {selectedThreat.staticRisk || selectedThreat.severity}
                     </span>
                   </div>
@@ -672,7 +672,7 @@ export function Dashboard() {
                     <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Static Analysis Flags</label>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {selectedThreat.staticFlags.map((flag, idx) => (
-                        <span key={idx} className="bg-red-500/10 text-[#EF4444] border border-red-500/10 px-2 py-0.5 rounded text-[10px] font-mono font-semibold">
+                        <span key={idx} className="bg-[#C27A73]/10 text-[#C27A73] border border-red-500/10 px-2 py-0.5 rounded text-[10px] font-mono font-semibold">
                           {flag}
                         </span>
                       ))}
@@ -681,11 +681,11 @@ export function Dashboard() {
                 )}
 
                 {/* Plain English Venice Explainer */}
-                <div className="border border-[#19C978]/20 bg-[#19C978]/5 p-4 rounded-xl">
+                <div className="border border-[#B8CFA8]/20 bg-[#B8CFA8]/5 p-4 rounded-xl">
                   <div className="flex items-start gap-2.5">
-                    <Info className="w-5 h-5 text-[#19C978] shrink-0 mt-0.5" />
+                    <Info className="w-5 h-5 text-[#B8CFA8] shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-[#19C978] font-bold text-xs uppercase tracking-wider mb-1">Natural Language AI Report</h4>
+                      <h4 className="text-[#B8CFA8] font-bold text-xs uppercase tracking-wider mb-1">Natural Language AI Report</h4>
                       <p className="text-gray-300 text-sm leading-relaxed font-sans">
                         {selectedThreat.explainer || "This contract was flagged due to abnormal static risk pattern checks. Manual audit recommended."}
                       </p>
@@ -698,7 +698,7 @@ export function Dashboard() {
               <div className="p-4 bg-[#101010] border-t border-white/5 flex justify-end">
                 <button
                   onClick={() => setSelectedThreat(null)}
-                  className="bg-[#19C978] hover:bg-[#14a361] text-black font-semibold text-xs py-2 px-5 rounded-full transition-colors"
+                  className="bg-[#B8CFA8] hover:bg-[#14a361] text-black font-semibold text-xs py-2 px-5 rounded-full transition-colors"
                 >
                   Close
                 </button>

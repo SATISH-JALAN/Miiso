@@ -141,7 +141,7 @@ export function Settings() {
     return (
       <div className="pt-32 pb-24 px-4 sm:px-6 max-w-md mx-auto min-h-screen flex flex-col justify-center items-center">
         <div className="bg-[#101010] p-8 rounded-3xl border border-white/5 text-center w-full shadow-2xl">
-          <Shield className="w-16 h-16 text-[#19C978] mx-auto mb-6 animate-pulse" />
+          <Shield className="w-16 h-16 text-[#B8CFA8] mx-auto mb-6 animate-pulse" />
           <h2 className="text-[#E1E0CC] font-bold text-2xl mb-2 tracking-tight">Connect Wallet</h2>
           <p className="text-gray-400 text-sm mb-6 leading-relaxed">
             Please connect your wallet to view or modify your auto-pilot security profile settings.
@@ -163,7 +163,7 @@ export function Settings() {
         {/* Security Profiles Configuration Card */}
         <div className="bg-[#101010] p-6 rounded-2xl border border-white/5">
           <h2 className="text-[#E1E0CC] font-medium mb-2 flex items-center gap-2">
-            <Shield className="w-4 h-4 text-[#19C978]" />
+            <Shield className="w-4 h-4 text-[#B8CFA8]" />
             Auto-Pilot Strategy Profiles
           </h2>
           <p className="text-xs text-gray-500 mb-6">Select how aggressively Miiso Sentinel will secure your active token permissions when threats are identified.</p>
@@ -175,14 +175,14 @@ export function Settings() {
                 title: "Ultra-Safe",
                 desc: "Instant revocation at ≥ 40% threat confidence. Skip veto buffer completely for maximum asset security.",
                 badge: "Highly Aggressive",
-                badgeColor: "bg-red-500/10 text-[#EF4444] border-red-500/20"
+                badgeColor: "bg-[#C27A73]/10 text-[#C27A73] border-red-500/20"
               },
               {
                 id: "balanced" as const,
                 title: "Balanced",
                 desc: "Auto-revokes critical Tier 1 threats instantly. Holds moderate Tier 2 threats in a 60-second veto buffer.",
                 badge: "Recommended",
-                badgeColor: "bg-[#19C978]/10 text-[#19C978] border-[#19C978]/20"
+                badgeColor: "bg-[#B8CFA8]/10 text-[#B8CFA8] border-[#B8CFA8]/20"
               },
               {
                 id: "manual" as const,
@@ -202,7 +202,7 @@ export function Settings() {
                   disabled={isUpdating}
                   className={`p-5 rounded-xl border text-left flex flex-col justify-between transition-all duration-300 min-h-40 ${
                     isActive 
-                      ? 'bg-[#19C978]/5 border-[#19C978] shadow-[0_0_15px_rgba(25,201,120,0.15)]' 
+                      ? 'bg-[#B8CFA8]/5 border-[#B8CFA8] shadow-[0_0_15px_rgba(25,201,120,0.15)]' 
                       : 'bg-black/40 border-white/5 hover:border-white/20'
                   } disabled:opacity-50`}
                 >
@@ -217,7 +217,7 @@ export function Settings() {
                   </div>
                   {isPending && (
                     <div className="mt-4 flex items-center gap-2 text-[10px] text-gray-500">
-                      <div className="w-3 h-3 border-2 border-t-transparent border-[#19C978] rounded-full animate-spin" />
+                      <div className="w-3 h-3 border-2 border-t-transparent border-[#B8CFA8] rounded-full animate-spin" />
                       Saving...
                     </div>
                   )}
@@ -273,7 +273,7 @@ export function Settings() {
                     value={budget} 
                     onChange={(e) => setBudget(Number(e.target.value))}
                     aria-label="Gas buffer limit slider"
-                    className="w-full accent-[#19C978]" 
+                    className="w-full accent-[#B8CFA8]" 
                   />
                   <div className="flex justify-between text-xs text-gray-600 mt-2 font-mono">
                     <span>1 USDC</span>
@@ -296,8 +296,8 @@ export function Settings() {
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
                 <div className="bg-black p-4 rounded-xl border border-white/5">
                   <div className="text-xs text-gray-500 mb-1">Relayer Status</div>
-                  <div className={`font-medium text-sm flex items-center gap-2 ${isExpired ? "text-[#EF4444]" : "text-[#19C978]"}`}>
-                    <div className={`w-1.5 h-1.5 rounded-full ${isExpired ? "bg-[#EF4444]" : "bg-[#19C978] animate-pulse"}`}/> 
+                  <div className={`font-medium text-sm flex items-center gap-2 ${isExpired ? "text-[#C27A73]" : "text-[#B8CFA8]"}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${isExpired ? "bg-[#C27A73]" : "bg-[#B8CFA8] animate-pulse"}`}/> 
                     {isExpired ? "EXPIRED" : "CONNECTED"}
                   </div>
                 </div>
@@ -332,7 +332,7 @@ export function Settings() {
                      </>
                    ) : "Renew EIP-7715 Session"}
                  </button>
-                 <button className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-3 rounded-xl text-sm transition-colors font-medium flex items-center justify-center gap-2" onClick={handleDisableGuard} disabled={isDisablingGuard}>
+                 <button className="flex-1 bg-[#C27A73]/10 hover:bg-[#C27A73]/20 text-[#C27A73] px-4 py-3 rounded-xl text-sm transition-colors font-medium flex items-center justify-center gap-2" onClick={handleDisableGuard} disabled={isDisablingGuard}>
                    {isDisablingGuard ? (
                      <>
                        <div className="w-4 h-4 border-2 border-t-transparent border-red-500 rounded-full animate-spin" />
@@ -361,7 +361,7 @@ export function Settings() {
                   placeholder="Paste contract address (0x...)" 
                   value={newAddress}
                   onChange={e => setNewAddress(e.target.value)}
-                  className="flex-1 bg-black p-3 rounded-lg border border-white/5 text-[#E1E0CC] font-mono text-sm placeholder-gray-600 focus:outline-none focus:border-[#19C978]/50 transition-colors" 
+                  className="flex-1 bg-black p-3 rounded-lg border border-white/5 text-[#E1E0CC] font-mono text-sm placeholder-gray-600 focus:outline-none focus:border-[#B8CFA8]/50 transition-colors" 
                 />
                 <button 
                   onClick={async () => {
@@ -373,7 +373,7 @@ export function Settings() {
                     }
                   }}
                   disabled={isSavingWhitelist}
-                  className="bg-[#19C978] text-black px-4 rounded-lg text-sm font-semibold hover:bg-[#14a361] transition-colors disabled:opacity-50"
+                  className="bg-[#B8CFA8] text-black px-4 rounded-lg text-sm font-semibold hover:bg-[#14a361] transition-colors disabled:opacity-50"
                 >
                   {isSavingWhitelist ? "Saving..." : "Add"}
                 </button>
@@ -390,7 +390,7 @@ export function Settings() {
                         await handleSaveWhitelist(next);
                       }}
                       disabled={isSavingWhitelist}
-                      className="text-gray-600 hover:text-red-500 transition-colors text-xs px-2 disabled:opacity-50"
+                      className="text-gray-600 hover:text-[#C27A73] transition-colors text-xs px-2 disabled:opacity-50"
                     >
                       Remove
                     </button>
