@@ -81,14 +81,17 @@ export function useSSE(userAddress: string | null) {
       es.addEventListener("CLEAN_SCAN", (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
+          const isScanning = data.status === "scanning";
           const cleanEvent: ProtectionEvent = {
             id: `clean-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             userAddress: userAddress!,
             tokenAddress: "N/A",
             spenderAddress: data.contractAddress,
-            exposedValue: data.inferenceCostUsdc
-              ? `$${data.inferenceCostUsdc.toFixed(5)}`
-              : "$0.00095",
+            exposedValue: isScanning
+              ? "Scanning…"
+              : data.inferenceCostUsdc
+                ? `$${data.inferenceCostUsdc.toFixed(5)}`
+                : "$0.00095",
             actionType: "clean",
             severity: "low",
             vetoCancelled: false,

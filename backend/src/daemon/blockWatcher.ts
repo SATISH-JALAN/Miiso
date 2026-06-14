@@ -177,6 +177,20 @@ async function processContractDeployment(address: string, blockNumber: bigint) {
     return;
   }
 
+  // 1.5  Immediately notify all connected dashboard clients that a new contract
+  //      has entered the scanning pipeline. This makes the "Live Network Scans"
+  //      panel update in real-time instead of waiting for the full AI analysis.
+  import("../server/sse/sseManager.js").then(({ sseManager }) => {
+    const scanStartData = {
+      contractAddress: normalizedAddress,
+      inferenceCostUsdc: 0,
+      timestamp: new Date().toISOString(),
+      status: "scanning",
+    };
+    sseManager.sendEventToUser("*", "CLEAN_SCAN", scanStartData);
+    sseManager.bufferAndBroadcastScan(scanStartData);
+  }).catch(() => {});
+
   // 2. Resolve Proxy implementation (check EIP-1967 slots)
   const targetAddress = await resolveProxyImplementation(normalizedAddress);
 
@@ -211,6 +225,18 @@ async function processContractDeployment(address: string, blockNumber: bigint) {
         veniceVulnerable: true,
         veniceConfidence: parseFloat(existingScan.confidence)
       });
+    } else {
+      // Emit completion event for safe cached contracts
+      import("../server/sse/sseManager.js").then(({ sseManager }) => {
+        const scanData = {
+          contractAddress: normalizedAddress,
+          inferenceCostUsdc: 0,
+          timestamp: new Date().toISOString(),
+          confidence: parseFloat(existingScan.confidence),
+        };
+        sseManager.sendEventToUser("*", "CLEAN_SCAN", scanData);
+        sseManager.bufferAndBroadcastScan(scanData);
+      }).catch(() => {});
     }
     return;
   }
