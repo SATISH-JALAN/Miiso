@@ -16,8 +16,8 @@ const WORKER_PATH = isTs
 interface Task {
   bytecode: string;
   contractAddress: string;
-  resolve: (value: string) => void;
-  reject: (err: any) => void;
+  resolve: (value: { decompiled: string; source: "heimdall" | "fallback_mock" }) => void;
+  reject: (err: unknown) => void;
   addedAt: number;
   timeoutId?: NodeJS.Timeout;
 }
@@ -40,7 +40,10 @@ class WorkerPool {
    * Enqueues a decompilation task.
    * Returns a promise that resolves to the decompiled Solidity code string.
    */
-  public decompile(contractAddress: string, bytecode: string): Promise<string> {
+  public decompile(
+    contractAddress: string,
+    bytecode: string
+  ): Promise<{ decompiled: string; source: "heimdall" | "fallback_mock" }> {
     return new Promise((resolve, reject) => {
       // Create task object
       const task: Task = {
@@ -100,7 +103,7 @@ class WorkerPool {
 
     const rpcUrl = process.env.DEMO_MODE === "true"
       ? "http://127.0.0.1:8545"
-      : (process.env.HTTP_RPC_URL || "https://mainnet.base.org");
+      : (process.env.HTTP_RPC_URL || "https://sepolia.base.org");
 
     worker.postMessage({
       bytecode: task.bytecode,
@@ -108,13 +111,16 @@ class WorkerPool {
       rpcUrl
     });
 
-    worker.on("message", (msg: { success: boolean; decompiledCode?: string; error?: string }) => {
+    worker.on("message", (msg: { success: boolean; decompiledCode?: string; source?: "heimdall" | "fallback_mock"; error?: string }) => {
       clearTimeout(timeoutId);
       this.activeWorkers.delete(worker);
       worker.terminate();
 
       if (msg.success && msg.decompiledCode !== undefined) {
-        task.resolve(msg.decompiledCode);
+        task.resolve({
+          decompiled: msg.decompiledCode,
+          source: msg.source ?? "fallback_mock",
+        });
       } else {
         task.reject(new Error(msg.error || "Unknown worker error"));
       }

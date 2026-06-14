@@ -1,5 +1,5 @@
 import { createPublicClient, fallback, http, webSocket } from "viem";
-import { baseSepolia } from "viem/chains";
+import { CHAIN } from "../config/chain.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -32,7 +32,7 @@ const transport = isDemo
     ].filter(Boolean) as any);
 
 export const publicClient = createPublicClient({
-  chain: baseSepolia,
+  chain: CHAIN,
   transport,
   pollingInterval: isDemo ? 500 : 1000,
 });

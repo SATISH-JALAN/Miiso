@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { runMigrations } from "./db/migrate.js";
 import { loadWhitelist } from "./security/whitelist.js";
+import { loadUserWhitelists } from "./db/queries/userWhitelist.js";
 import { sseManager } from "./server/sse/sseManager.js";
 import { rescheduleStagedEvents, clearAllStagedTimers } from "./daemon/confidenceRouter.js";
 import { startBlockWatcher, stopBlockWatcher } from "./daemon/blockWatcher.js";
@@ -21,6 +22,7 @@ async function main() {
 
     // 2. Load whitelist data into sub-microsecond in-memory lookup cache
     await loadWhitelist();
+    await loadUserWhitelists();
 
     // 3. Start PostgreSQL LISTEN channel notification broker for SSE
     await sseManager.startListening();

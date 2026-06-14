@@ -1,6 +1,6 @@
 import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { base, baseSepolia } from "viem/chains";
+import { CHAIN } from "../config/chain.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -20,7 +20,7 @@ const rpcUrl = isDemo
 
 export const walletClient = createWalletClient({
   account: agentAccount,
-  chain: isDemo ? base : baseSepolia,
+  chain: isDemo ? CHAIN : CHAIN,
   transport: http(rpcUrl)
 });
 

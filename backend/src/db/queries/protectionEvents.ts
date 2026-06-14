@@ -1,6 +1,22 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "../client.js";
 import { protectionEvents, permissionsRegistry, contractScanLog, approvalCache } from "../schema.js";
+import { USDC_ADDRESS } from "../../blockchain/contracts.js";
+
+const SEPOLIA_USDC = USDC_ADDRESS.toLowerCase();
+const MAINNET_USDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+
+function isUsdcToken(tokenAddress: string): boolean {
+  const addr = tokenAddress.toLowerCase();
+  return addr === SEPOLIA_USDC || addr === MAINNET_USDC;
+}
+
+function rawToUsd(tokenAddress: string, rawVal: bigint): number {
+  if (isUsdcToken(tokenAddress)) {
+    return Number(rawVal) / 1e6;
+  }
+  return (Number(rawVal) / 1e18) * 3000;
+}
 
 export async function insertProtectionEvent(data: {
   userAddress: string;
@@ -103,13 +119,7 @@ export async function getDashboardStats(userAddress: string) {
 
   let totalSavedUsd = 0;
   for (const event of events) {
-    const isUSDC = event.tokenAddress.toLowerCase() === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
-    const rawVal = BigInt(event.exposedValue);
-    if (isUSDC) {
-      totalSavedUsd += Number(rawVal) / 1e6;
-    } else {
-      totalSavedUsd += (Number(rawVal) / 1e18) * 3000; // WETH conversion
-    }
+    totalSavedUsd += rawToUsd(event.tokenAddress, BigInt(event.exposedValue));
   }
 
   // 2. Budget information from permissions_registry
@@ -143,23 +153,18 @@ export async function getDashboardStats(userAddress: string) {
 
   let totalActiveExposureUsd = 0;
   for (const app of cachedApprovals) {
-    const isUSDC = app.tokenAddress.toLowerCase() === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
-    const rawVal = BigInt(app.allowance);
-    if (isUSDC) {
-      totalActiveExposureUsd += Number(rawVal) / 1e6;
-    } else {
-      totalActiveExposureUsd += (Number(rawVal) / 1e18) * 3000;
-    }
+    totalActiveExposureUsd += rawToUsd(app.tokenAddress, BigInt(app.allowance));
   }
+
+  const budgetCap = permission?.budgetCap || "0";
+  const budgetSpent = permission?.budgetSpent || "0";
 
   return {
     threatsDetected: events.length,
     totalSaved: `$${totalSavedUsd.toFixed(2)}`,
     totalActiveExposure: `$${totalActiveExposureUsd.toFixed(2)}`,
-    budgetCap: permission?.budgetCap || "0",
-    budgetSpent: permission?.budgetSpent || "0",
-    budgetRemaining: (
-      BigInt(permission?.budgetCap || "0") - BigInt(permission?.budgetSpent || "0")
-    ).toString()
+    budgetCap,
+    budgetSpent,
+    budgetRemaining: (BigInt(budgetCap) - BigInt(budgetSpent)).toString(),
   };
 }

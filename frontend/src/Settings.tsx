@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useWallet } from './WalletContext';
 import { usePermission } from './hooks/usePermission';
 import { useStore } from './store/index';
+import { putUserWhitelist } from './lib/api';
 
 export function Settings() {
   const {
@@ -45,7 +46,8 @@ export function Settings() {
   const handleRenew = async () => {
     setIsRenewing(true);
     try {
-      await grantPermission(budget, whitelist);
+      await grantPermission(budget, whitelist, 30);
+      await putUserWhitelist(walletAddress!, whitelist);
       alert("Permission successfully renewed for 30 days.");
     } catch (err) {
       console.error("Failed to renew permission:", err);
@@ -69,10 +71,10 @@ export function Settings() {
   };
 
   const formatAddr = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
-  const formatBudget = (weiStr: string) => {
+  const formatBudget = (rawStr: string) => {
     try {
-      const val = parseFloat(weiStr) / 1e18;
-      return val.toFixed(4);
+      const val = parseFloat(rawStr) / 1e6;
+      return val.toFixed(2);
     } catch {
       return "0.00";
     }
@@ -218,7 +220,7 @@ export function Settings() {
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-sm text-gray-400">Gas Buffer Limit</span>
-                    <span className="text-[#E1E0CC] font-mono">{budget} WETH</span>
+                    <span className="text-[#E1E0CC] font-mono">{budget} USDC</span>
                   </div>
                   <input 
                     type="range" 
@@ -229,11 +231,11 @@ export function Settings() {
                     className="w-full accent-[#19C978]" 
                   />
                   <div className="flex justify-between text-xs text-gray-600 mt-2 font-mono">
-                    <span>1 WETH</span>
-                    <span>10 WETH</span>
+                    <span>1 USDC</span>
+                    <span>10 USDC</span>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 leading-relaxed">Adjust your maximum WETH buffer limit for gas-less 1Shot transaction relayers. Limits transaction loops.</p>
+                <p className="text-xs text-gray-500 leading-relaxed">Adjust your maximum USDC budget cap for gas-less 1Shot transaction relayers.</p>
               </div>
             </div>
           </div>

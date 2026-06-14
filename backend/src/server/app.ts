@@ -17,6 +17,8 @@ import { seedWalletRoutes } from "./routes/seedWallet.js";
 import { revokeBatchRoutes } from "./routes/batch.js";
 import { analyzeRoutes } from "./routes/analyze.js";
 import { publicEventsRoutes } from "./routes/publicEvents.js";
+import { relayRoutes } from "./routes/relay.js";
+import { healthRoutes } from "./routes/health.js";
 
 export function buildApp() {
   const app = Fastify({
@@ -80,9 +82,18 @@ export function buildApp() {
   app.register(vetoRoutes, { prefix: "/api" });
   app.register(webhookRoutes, { prefix: "/api" });
   app.register(threatIntelRoutes, { prefix: "/api" });
-  app.register(seedWalletRoutes, { prefix: "/api" });
   app.register(analyzeRoutes, { prefix: "/api" });
   app.register(publicEventsRoutes, { prefix: "/api" });
+  app.register(relayRoutes, { prefix: "/api" });
+  app.register(healthRoutes, { prefix: "/api" });
+
+  const enableDevRoutes =
+    process.env.NODE_ENV !== "production" ||
+    process.env.ENABLE_DEV_ROUTES === "true";
+
+  if (enableDevRoutes) {
+    app.register(seedWalletRoutes, { prefix: "/api" });
+  }
 
   return app;
 }

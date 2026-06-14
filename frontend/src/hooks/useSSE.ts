@@ -1,18 +1,14 @@
-// ===== useSSE — persistent SSE connection with auto-reconnect =====
 import { useEffect, useRef } from "react";
 import { useStore } from "../store/index";
 import { getSSEUrl } from "../lib/api";
 import type { ProtectionEvent } from "../types/index";
 
-/**
- * Subscribes to the backend SSE stream for real-time threat events.
- * Auto-reconnects on disconnect (3s retry).
- * Pushes events into Zustand store (NOT React state) to avoid re-render cascades.
- */
 export function useSSE(userAddress: string | null) {
   const appendEvent = useStore((s) => s.appendEvent);
   const startVeto = useStore((s) => s.startVeto);
-  const setHistory = useStore((s) => s.setHistory);
+  const confirmProtectionEvent = useStore((s) => s.confirmProtectionEvent);
+  const markVetoCancelled = useStore((s) => s.markVetoCancelled);
+  const setDormant = useStore((s) => s.setDormant);
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -33,65 +29,76 @@ export function useSSE(userAddress: string | null) {
           const event = JSON.parse(e.data) as ProtectionEvent;
           appendEvent(event);
         } catch {
-          // Ignore non-JSON messages (heartbeats, etc.)
+          /* heartbeats */
         }
       };
 
-      // Listen for specific event types
-      es.addEventListener("PROTECTION_STAGED", (e: any) => {
+      es.addEventListener("PROTECTION_STAGED", (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
-          console.log("⏰ SSE: PROTECTION_STAGED received", data);
-
-          // Start veto countdown in Zustand
-          startVeto(data as ProtectionEvent, () => {
-            console.log("⏰ Veto countdown expired — backend will auto-execute");
+          const stagedEvent: ProtectionEvent = {
+            id: data.eventId,
+            userAddress: userAddress!,
+            tokenAddress: data.tokenAddress,
+            spenderAddress: data.spenderAddress,
+            exposedValue: data.amount ?? "0",
+            actionType: "veto",
+            severity: "medium",
+            vetoCancelled: false,
+            stagedUntil: data.stagedUntil,
+            relayStatus: "pending",
+            createdAt: new Date().toISOString(),
+          };
+          appendEvent(stagedEvent);
+          startVeto(stagedEvent, () => {
+            /* backend auto-executes when countdown expires */
           });
-        } catch { /* ignore parse errors */ }
-      });
-
-      es.addEventListener("PROTECTION_CONFIRMED", (e: any) => {
-        try {
-          const data = JSON.parse(e.data);
-          console.log("✅ SSE: PROTECTION_CONFIRMED received", data);
         } catch { /* ignore */ }
       });
 
-      es.addEventListener("VETO_CONFIRMED", (e: any) => {
+      es.addEventListener("PROTECTION_CONFIRMED", (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
-          console.log("🚫 SSE: VETO_CONFIRMED received", data);
+          if (data.eventId && data.txHash) {
+            confirmProtectionEvent(data.eventId, data.txHash);
+          }
         } catch { /* ignore */ }
       });
 
-      es.addEventListener("PERMISSION_REVOKED", (e: any) => {
+      es.addEventListener("VETO_CONFIRMED", (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
-          console.log("🔒 SSE: PERMISSION_REVOKED received", data);
+          if (data.eventId) {
+            markVetoCancelled(data.eventId);
+          }
         } catch { /* ignore */ }
       });
 
-      es.addEventListener("CLEAN_SCAN", (e: any) => {
+      es.addEventListener("PERMISSION_REVOKED", () => {
+        setDormant();
+      });
+
+      es.addEventListener("CLEAN_SCAN", (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
-          console.log("✨ SSE: CLEAN_SCAN received", data);
           const cleanEvent: ProtectionEvent = {
             id: `clean-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             userAddress: userAddress!,
-            tokenAddress: "N/A", // Not a specific token, just a scan
+            tokenAddress: "N/A",
             spenderAddress: data.contractAddress,
-            exposedValue: data.inferenceCostUsdc ? `$${data.inferenceCostUsdc.toFixed(5)}` : "$0.00095",
+            exposedValue: data.inferenceCostUsdc
+              ? `$${data.inferenceCostUsdc.toFixed(5)}`
+              : "$0.00095",
             actionType: "clean",
             severity: "low",
             vetoCancelled: false,
             stagedUntil: null,
-            createdAt: data.timestamp || new Date().toISOString()
+            createdAt: data.timestamp || new Date().toISOString(),
           };
           appendEvent(cleanEvent);
         } catch { /* ignore */ }
       });
 
-      // Auto-reconnect on error (3s delay)
       es.onerror = () => {
         es.close();
         esRef.current = null;
@@ -111,5 +118,12 @@ export function useSSE(userAddress: string | null) {
         esRef.current = null;
       }
     };
-  }, [userAddress, appendEvent, startVeto, setHistory]);
+  }, [
+    userAddress,
+    appendEvent,
+    startVeto,
+    confirmProtectionEvent,
+    markVetoCancelled,
+    setDormant,
+  ]);
 }

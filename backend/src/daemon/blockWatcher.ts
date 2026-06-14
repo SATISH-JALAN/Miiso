@@ -6,23 +6,18 @@ import { fetchBytecodeWithRetry } from "./bytecodeRetry.js";
 import { decompileContract } from "./heimdall.js";
 import { routeThreatConfidence } from "./confidenceRouter.js";
 import { runOrchestrator } from "../agents/orchestrator.js";
-import { insertScan, getScanByAddress } from "../db/queries/scanLog.js";
-import { insertThreatIntel } from "../db/queries/threatIntel.js";
+import { insertScan } from "../db/queries/scanLog.js";
 import { db } from "../db/client.js";
 import { contractScanLog } from "../db/schema.js";
 import { sha256, getAddress } from "viem";
 import { eq } from "drizzle-orm";
 import { logger } from "../utils/logger.js";
-import { upsertApproval } from "../db/queries/approvalCache.js";
-import { getAllActivePermissions } from "../db/queries/permissions.js";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 let isScanningActive = false;
 let unwatchBlockLoop: (() => void) | null = null;
-let mockWatcherInterval: NodeJS.Timeout | null = null;
-let simulatedBlockHeight = 47200000n;
 
 /**
  * Starts the Base blockchain real-time block watching scanner daemon.
@@ -221,20 +216,23 @@ async function processContractDeployment(address: string, blockNumber: bigint) {
   }
 
   // 5. Decompile bytecode using Worker Pool (Heimdall-rs wrapper)
-  const decompiledCode = await decompileContract(normalizedAddress, bytecode);
+  const { decompiled: decompiledCode, source: decompileSource } =
+    await decompileContract(normalizedAddress, bytecode);
 
-  // 6. Run multi-agent orchestrator (Research + Data + Analysis + Executor)
+  // 6. Run multi-agent orchestrator (analysis only — routing is separate)
   const decision = await runOrchestrator(normalizedAddress, decompiledCode);
 
-  // Extract analysis output for DB logging
-  const analysisAgent = decision.agentResults.find((r) => r.agentId === "analysis");
-  const analysisOutput = analysisAgent?.output as { confidence: number; vulnerabilities: string[]; staticRisk: string; staticFlags: string[]; veniceRaw: unknown } | null;
+  const staticRisk = decision.staticRisk;
+  const staticFlags = decision.staticFlags;
+  const veniceConfidence = decision.veniceConfidence;
+  const isVulnerable =
+    decision.veniceVulnerable ||
+    veniceConfidence >= 0.5 ||
+    staticRisk === "high";
 
-  const isVulnerable = decision.combinedConfidence >= 0.5 && decision.shouldExecute;
-  const staticRisk = (analysisOutput?.staticRisk ?? "low") as "high" | "medium" | "low";
-  const staticFlags = analysisOutput?.staticFlags ?? [];
-
-  logger.info(`🤖 BlockWatcher: Orchestrator completed for ${normalizedAddress}. Tier: ${decision.tier} | Confidence: ${decision.combinedConfidence.toFixed(2)} | Cost: $${decision.totalCostUsdc.toFixed(4)}`);
+  logger.info(
+    `🤖 BlockWatcher: Orchestrator completed for ${normalizedAddress}. Tier: ${decision.tier} | Confidence: ${decision.combinedConfidence.toFixed(2)} | Cost: $${decision.totalCostUsdc.toFixed(4)} | decompile=${decompileSource}`
+  );
 
   // 7. Log scan results to Database
   await insertScan({
@@ -243,39 +241,36 @@ async function processContractDeployment(address: string, blockNumber: bigint) {
     blockNumber,
     vulnerable: isVulnerable,
     confidence: decision.combinedConfidence.toString(),
-    verdict: JSON.stringify(decision),
+    verdict: JSON.stringify({ ...decision, decompileSource }),
     staticRisk,
     staticFlags,
-    explainer: analysisOutput?.vulnerabilities?.join("; ") ?? null
+    explainer: decision.recommendation ?? null,
   });
 
-  // Emit CLEAN_SCAN to all connected clients if the contract is deemed safe
+  // 8. Route threats through unified confidence router (Tier 1/2/3 + veto)
+  if (isVulnerable) {
+    await routeThreatConfidence({
+      contractAddress: normalizedAddress,
+      bytecode,
+      staticRisk,
+      staticFlags,
+      veniceVulnerable: decision.veniceVulnerable,
+      veniceConfidence,
+    });
+  }
+
+  // 9. Emit CLEAN_SCAN when analysis says safe
   if (!isVulnerable) {
     import("../server/sse/sseManager.js").then(({ sseManager }) => {
       const scanData = {
         contractAddress: normalizedAddress,
         inferenceCostUsdc: decision.totalCostUsdc,
-        timestamp: new Date().toISOString()
+        decompileSource,
+        timestamp: new Date().toISOString(),
       };
-      // Broadcast to authenticated user clients
       sseManager.sendEventToUser("*", "CLEAN_SCAN", scanData);
-      // Buffer and broadcast to public landing page clients
       sseManager.bufferAndBroadcastScan(scanData);
-    }).catch(err => logger.error("Failed to dynamically import sseManager:", err));
-  }
-
-  // 8. If vulnerability confirmed, catalog threat intel
-  if (isVulnerable) {
-    try {
-      const mockVector = Array(1536).fill(0).map(() => Math.random() - 0.5);
-      await insertThreatIntel({
-        bytecodeHash,
-        bytecode,
-        embedding: mockVector
-      });
-    } catch (intelErr) {
-      logger.error(`⚠️ BlockWatcher: Failed to catalog threat intel embeddings for ${normalizedAddress}:`, intelErr);
-    }
+    }).catch((err) => logger.error("Failed to dynamically import sseManager:", err));
   }
 }
 

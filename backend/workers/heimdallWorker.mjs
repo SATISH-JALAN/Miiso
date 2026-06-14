@@ -14,7 +14,11 @@ parentPort.on("message", async (msg) => {
 
   try {
     const decompiledSol = await runDecompiler(contractAddress, bytecode, rpcUrl);
-    parentPort.postMessage({ success: true, decompiledCode: decompiledSol });
+    parentPort.postMessage({
+      success: true,
+      decompiledCode: decompiledSol.code,
+      source: decompiledSol.source,
+    });
   } catch (error) {
     parentPort.postMessage({ success: false, error: error.message || "Decompilation failed" });
   }
@@ -49,7 +53,7 @@ async function runDecompiler(contractAddress, bytecode, rpcUrl) {
                 if (solFile) {
                   const content = fs.readFileSync(path.join(fullPath, solFile), "utf8");
                   cleanupDir(tempDir);
-                  return resolve(content);
+                  return resolve({ code: content, source: "heimdall" });
                 }
               }
             }
@@ -63,13 +67,13 @@ async function runDecompiler(contractAddress, bytecode, rpcUrl) {
         // based on bytecode analysis to let Venice AI reason about it without blocking the system.
         const simulatedCode = generateFallbackSolidity(contractAddress, bytecode);
         cleanupDir(tempDir);
-        resolve(simulatedCode);
+        resolve({ code: simulatedCode, source: "fallback_mock" });
       });
     } catch (execErr) {
       // Handle synchronous spawn errors (e.g. command too long, spawn error)
       const simulatedCode = generateFallbackSolidity(contractAddress, bytecode);
       cleanupDir(tempDir);
-      resolve(simulatedCode);
+      resolve({ code: simulatedCode, source: "fallback_mock" });
     }
   });
 }

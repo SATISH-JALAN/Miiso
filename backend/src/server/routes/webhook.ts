@@ -6,6 +6,7 @@ import { updateRelayStatus } from "../../db/queries/protectionEvents.js";
 import { invalidateApproval } from "../../db/queries/approvalCache.js";
 import { sseManager } from "../sse/sseManager.js";
 import { eq, and, isNull, sql } from "drizzle-orm";
+import { collectSuccessFee } from "../../payments/successFee.js";
 import { logger } from "../../utils/logger.js";
 
 // NOTE: For raw body access, Fastify must be configured with:
@@ -57,38 +58,38 @@ export async function webhookRoutes(
         signatureHeader === "demo_signature_bypass";
 
       if (!isDemoBypass) {
-        // Verify signature if provided
+        const isProduction =
+          process.env.NODE_ENV === "production" &&
+          process.env.DEMO_MODE !== "true";
+
+        let signatureValid = false;
+
         if (request.body.signature) {
-          // Use body.signature field
-          const isValid = verifyOneShotWebhook(
+          signatureValid = verifyOneShotWebhook(
             String(rawBody),
             request.body.signature.replace("0x", "")
           );
-          if (!isValid) {
-            logger.warn(
-              "[WebhookHandler] Invalid Ed25519 signature in body"
-            );
-            return reply
-              .code(401)
-              .send({ error: "Invalid signature" });
-          }
         } else if (signatureHeader) {
-          // Use X-Signature header
-          const isValid = verifyOneShotWebhook(
+          signatureValid = verifyOneShotWebhook(
             String(rawBody),
             signatureHeader
           );
-          if (!isValid) {
-            logger.warn(
-              "[WebhookHandler] Invalid Ed25519 signature in header"
-            );
-            return reply
-              .code(401)
-              .send({ error: "Invalid signature" });
-          }
         }
-        // If no signature at all and not demo mode, we still process
-        // (some dev environments may not have webhook signing configured)
+
+        if (!signatureValid) {
+          if (isProduction) {
+            if (!process.env.ONESHOT_WEBHOOK_PUBLIC_KEY) {
+              logger.error(
+                "[WebhookHandler] ONESHOT_WEBHOOK_PUBLIC_KEY missing in production"
+              );
+            }
+            logger.warn("[WebhookHandler] Rejected unsigned/invalid webhook");
+            return reply.code(401).send({ error: "Invalid or missing signature" });
+          }
+          logger.warn(
+            "[WebhookHandler] Processing unsigned webhook (non-production only)"
+          );
+        }
       }
 
       // ── 2. Replay attack prevention ───────────────────────────────────
@@ -138,12 +139,12 @@ export async function webhookRoutes(
         if (status === "confirmed") {
           let feeToDeduct = "0";
           if (actualFee) {
-            feeToDeduct = Math.ceil(actualFee * 1e18).toString();
+            feeToDeduct = Math.ceil(actualFee * 1_000_000).toString();
           } else if (relayFee && relayFee !== "0") {
             const parsed = parseFloat(relayFee);
             if (parsed > 0) {
               if (parsed < 1.0) {
-                feeToDeduct = Math.ceil(parsed * 1e18).toString();
+                feeToDeduct = Math.ceil(parsed * 1_000_000).toString();
               } else {
                 feeToDeduct = Math.ceil(parsed).toString();
               }
@@ -178,6 +179,13 @@ export async function webhookRoutes(
             event.tokenAddress
           );
 
+          // Collect success fee (1.5% of protected value)
+          const feeResult = await collectSuccessFee(
+            event.userAddress,
+            event.exposedValue,
+            event.id
+          );
+
           // Emit real-time confirmation via SSE
           sseManager.sendEventToUser(
             event.userAddress,
@@ -189,6 +197,8 @@ export async function webhookRoutes(
               spenderAddress: event.spenderAddress,
               amount: event.exposedValue,
               actualFee: actualFee || Number(relayFee) / 1_000_000,
+              successFeeUsdc: feeResult.feeUsdc,
+              successFeeCollected: feeResult.collected,
             }
           );
 

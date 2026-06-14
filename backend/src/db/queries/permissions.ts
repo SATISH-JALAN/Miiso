@@ -9,6 +9,8 @@ export async function createPermission(data: {
   sessionSignerAddress: string;
   budgetCap: string; // numeric string
   expiry: Date;
+  grantMethod?: string;
+  feeAllowanceApproved?: boolean;
 }) {
   const normalizedUser = data.userAddress.toLowerCase();
   
@@ -32,6 +34,8 @@ export async function createPermission(data: {
       sessionSignerAddress: data.sessionSignerAddress.toLowerCase(),
       budgetCap: data.budgetCap,
       budgetSpent: "0",
+      grantMethod: data.grantMethod ?? null,
+      feeAllowanceApproved: data.feeAllowanceApproved ?? false,
       expiry: data.expiry,
       createdAt: new Date(),
     })
@@ -87,6 +91,26 @@ export async function getAllActivePermissions() {
         gt(permissionsRegistry.expiry, now)
       )
     );
+}
+
+export async function updateFeeAllowance(
+  userAddress: string,
+  approved: boolean
+): Promise<typeof permissionsRegistry.$inferSelect | null> {
+  const normalizedUser = userAddress.toLowerCase();
+
+  const [updated] = await db
+    .update(permissionsRegistry)
+    .set({ feeAllowanceApproved: approved })
+    .where(
+      and(
+        eq(permissionsRegistry.userAddress, normalizedUser),
+        isNull(permissionsRegistry.revokedAt)
+      )
+    )
+    .returning();
+
+  return updated || null;
 }
 
 export async function updateSecurityProfile(userAddress: string, securityProfile: string) {

@@ -21,7 +21,7 @@ export function TxLink({ txHash, label, className = '' }: TxLinkProps) {
     );
   }
 
-  const url = `https://basescan.org/tx/${txHash}`;
+  const url = `https://sepolia.basescan.org/tx/${txHash}`;
 
   return (
     <a
