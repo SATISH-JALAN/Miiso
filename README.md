@@ -35,10 +35,9 @@
 
 You grant Miiso a single scoped permission: **reset a token approval to zero**. Nothing else. No transfers. No swaps. Enforced on-chain via MetaMask Smart Accounts and ERC-7710 caveats.
 
-```
-Deploy → Detect → Decompile → Analyze → Route → Revoke → Confirm
-         └────────────── under 10 seconds end-to-end ──────────────┘
-```
+<p align="center">
+  <img src="frontend/public/screenshots/defi_security_pipeline.svg" alt="Miiso DeFi Security Pipeline" width="960" />
+</p>
 
 <p align="center">
   <img src="frontend/public/screenshots/dashboard.jpg" alt="Miiso Protection Dashboard" width="800" />
