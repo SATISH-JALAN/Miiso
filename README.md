@@ -301,6 +301,7 @@ sequenceDiagram
     User->>MM: Approve SuccessFeeHook (USDC)
     API-->>UI: Protection active
     UI->>API: SSE /api/events/:address
+```
 
 ### Telegram Integration
 
@@ -340,7 +341,6 @@ sequenceDiagram
     else User does nothing (60s passes)
         Router->>Relay: Executes approve(0) autonomously
     end
-```
 ```
 
 ---
