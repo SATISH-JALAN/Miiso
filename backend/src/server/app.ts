@@ -71,6 +71,11 @@ export function buildApp() {
     });
   });
 
+  // Root Route
+  app.get("/", async (request, reply) => {
+    return { status: "ok", message: "Miiso Backend is running 🚀", timestamp: new Date().toISOString() };
+  });
+
   // Register Routes
   app.register(permissionsRoutes, { prefix: "/api" });
   app.register(eventsRoutes, { prefix: "/api" });
