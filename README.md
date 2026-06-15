@@ -487,6 +487,42 @@ pnpm deploy:honeypot         # deploy test drainer to Base Sepolia
 
 ---
 
+## Hackathon Track Deliverables
+
+### Smart Accounts Kit Usage
+* **Advanced Permissions (ERC-7715):**
+  * **Requesting:** [`frontend/src/lib/metamask.ts`](frontend/src/lib/metamask.ts) and [`frontend/src/hooks/usePermission.ts`](frontend/src/hooks/usePermission.ts).
+  * **Redeeming:** [`backend/src/daemon/revocationExecutor.ts`](backend/src/daemon/revocationExecutor.ts) and [`contracts/src/ApprovalRevocationEnforcer.sol`](contracts/src/ApprovalRevocationEnforcer.sol).
+* **Delegations:**
+  * **Creating:** [`frontend/src/lib/metamask.ts`](frontend/src/lib/metamask.ts) (EIP-7702 signed delegations).
+  * **Redeeming:** [`backend/src/server/routes/permissions.ts`](backend/src/server/routes/permissions.ts).
+* **x402 (SIWE):**
+  * **Server Integration:** [`backend/src/payments/x402Client.ts`](backend/src/payments/x402Client.ts) and [`backend/src/server/routes/threatIntel.ts`](backend/src/server/routes/threatIntel.ts).
+  * **Client Integration:** [`frontend/src/Research.tsx`](frontend/src/Research.tsx).
+
+### 1Shot API Usage
+* **Code usage links:**
+  * EIP-7702 smart account upgrade and USDC paymaster via 1Shot: [`frontend/src/lib/metamask.ts`](frontend/src/lib/metamask.ts).
+  * Backend relayer dispatch for autonomous actions: [`backend/src/daemon/revocationExecutor.ts`](backend/src/daemon/revocationExecutor.ts).
+
+### Venice AI Usage
+* **Code usage links:**
+  * Inference logic, 402 payment handling, and tier routing: [`backend/src/daemon/veniceAnalyzer.ts`](backend/src/daemon/veniceAnalyzer.ts).
+  * Inference cost tracking: [`backend/src/utils/cost.ts`](backend/src/utils/cost.ts).
+
+### Feedback
+*(Applying for the Feedback track)*
+
+Building Miiso during this hackathon was an incredible experience. The combination of MetaMask's ERC-7715 Advanced Permissions, the gasless relayer capabilities of the 1Shot API, and Venice AI's rapid threat intelligence allowed us to build an autonomous security product that simply wasn't possible before. 
+
+A few takeaways from our development journey:
+- **Smart Accounts & 1Shot:** Integrating the EIP-7702 upgrade seamlessly with the 1Shot relayer drastically lowered the barrier to entry. We were able to abstract away gas costs (using USDC) and offer protection without requiring users to hold native ETH.
+- **Venice AI:** The speed and uncensored nature of the models were perfect for analyzing raw, decompiled bytecode on the fly without running into artificial safety filters that often block legitimate security research.
+
+*(A detailed technical blog post outlining our complete feedback and build journey will be linked here soon).*
+
+---
+
 ## Built with
 
 <p align="center">
