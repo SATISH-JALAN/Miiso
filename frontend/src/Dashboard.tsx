@@ -334,14 +334,14 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         {/* Zone 2 - Live Threat Feed */}
-        <div className="xl:col-span-5 bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex flex-col min-h-[420px]">
+        <div className="xl:col-span-5 bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex flex-col h-[580px]">
           <SectionHeader
             title="Live Network Scans"
             icon={<Activity className="w-4 h-4 text-[#B8CFA8] animate-pulse" />}
           />
-          <div className="p-3 flex-1 overflow-y-auto space-y-3 font-mono text-xs">
+          <div className="p-3 flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-3 font-mono text-xs">
             {events.length === 0 ? (
               <LiveFeedIdlePanel setupComplete={setupComplete && !isReadOnly} />
             ) : (
@@ -416,7 +416,7 @@ export function Dashboard() {
 
         <div className="xl:col-span-7 flex flex-col gap-6 min-h-[420px]">
           {/* Zone 3 - Protected Assets */}
-          <div className="bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex-1 flex flex-col">
+          <div className="bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex flex-col">
             <SectionHeader
               title="Protected Assets"
               action={
@@ -506,7 +506,7 @@ export function Dashboard() {
           </div>
 
           {/* Zone 4 - Protection History */}
-          <div className="bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex-1 flex flex-col">
+          <div className="bg-[#101010] rounded-2xl border border-white/5 overflow-hidden flex flex-col">
             <SectionHeader title="Protection History" />
             {history.length === 0 ? (
               <TableShell
