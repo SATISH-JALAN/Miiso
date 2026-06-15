@@ -7,6 +7,8 @@ import { rescheduleStagedEvents, clearAllStagedTimers } from "./daemon/confidenc
 import { startBlockWatcher, stopBlockWatcher } from "./daemon/blockWatcher.js";
 import { buildApp } from "./server/app.js";
 import { logger } from "./utils/logger.js";
+import { startTelegramBot, stopTelegramBot } from "./telegram/bot.js";
+import { telegramNotifier } from "./telegram/notifier.js";
 
 dotenv.config();
 
@@ -33,7 +35,11 @@ async function main() {
     // 5. Start real-time block scanner daemon on Base
     await startBlockWatcher();
 
-    // 6. Build and listen Fastify server
+    // 6. Initialize Telegram bot + notifier
+    await telegramNotifier.initialize();
+    await startTelegramBot();
+
+    // 7. Build and listen Fastify server
     const app = buildApp();
     
     await app.listen({ port: PORT, host: HOST });
@@ -43,6 +49,8 @@ async function main() {
     const shutdown = async (signal: string) => {
       logger.warn(`🛑 Received ${signal}. Initiating graceful shutdown...`);
       
+      stopTelegramBot();
+
       // Stop new block listener
       stopBlockWatcher();
       

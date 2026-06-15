@@ -6,7 +6,7 @@ import { executeRevocation } from "./revocationExecutor.js";
 import { sseManager } from "../server/sse/sseManager.js";
 import { eq, and, gt, isNull } from "drizzle-orm";
 import { logger } from "../utils/logger.js";
-import { sendTelegramAlert } from "../utils/telegram.js";
+import { telegramNotifier } from "../telegram/notifier.js";
 import { isUserWhitelisted } from "../db/queries/userWhitelist.js";
 
 const TIER1_THRESHOLD = parseFloat(process.env.TIER1_THRESHOLD || "0.85");
@@ -122,16 +122,15 @@ export async function routeThreatConfidence(input: ConfidenceRoutingInput) {
           continue;
         }
 
-        await sendTelegramAlert(
-          `🚨 <b>Miiso Sentinel Blocked Threat! (Immediate)</b>\n\n` +
-          `User: <code>${user}</code>\n` +
-          `Token: <code>${record.tokenAddress}</code>\n` +
-          `Spender: <code>${spender}</code>\n` +
-          `Exposed Value: <code>${record.allowance}</code>\n` +
-          `Status: <b>Auto-Revocation Dispatched (1Shot)</b>\n` +
-          `Profile: <b>${profile.toUpperCase()}</b>\n` +
-          `Combined Confidence: <b>${(combinedConfidence * 100).toFixed(1)}%</b>`
-        );
+        await telegramNotifier.notifyThreat({
+          tier: 1,
+          user,
+          token: record.tokenAddress,
+          spender,
+          exposedValue: record.allowance,
+          profile,
+          confidence: combinedConfidence
+        });
       } catch (err) {
         logger.error(`❌ Router: Failed to execute Tier 1 revocation for user ${user}:`, err);
       }
@@ -174,16 +173,16 @@ export async function routeThreatConfidence(input: ConfidenceRoutingInput) {
         // Set up in-memory veto timer
         setupStagedTimer(stagedEvent.id, user, record.tokenAddress, spender, record.allowance, VETO_SECONDS * 1000);
 
-        await sendTelegramAlert(
-          `⏰ <b>Miiso Sentinel Threat Staged! (Tier 2 Veto)</b>\n\n` +
-          `User: <code>${user}</code>\n` +
-          `Token: <code>${record.tokenAddress}</code>\n` +
-          `Spender: <code>${spender}</code>\n` +
-          `Veto Period: <b>${VETO_SECONDS}s</b>\n` +
-          `Status: <b>Pending (60s countdown)</b>\n` +
-          `Profile: <b>${profile.toUpperCase()}</b>\n` +
-          `Combined Confidence: <b>${(combinedConfidence * 100).toFixed(1)}%</b>`
-        );
+        await telegramNotifier.notifyThreat({
+          tier: 2,
+          eventId: stagedEvent.id,
+          user,
+          token: record.tokenAddress,
+          spender,
+          exposedValue: record.allowance,
+          profile,
+          confidence: combinedConfidence
+        });
       } catch (err) {
         logger.error(`❌ Router: Failed to staging Tier 2 veto countdown for user ${user}:`, err);
       }
@@ -201,15 +200,15 @@ export async function routeThreatConfidence(input: ConfidenceRoutingInput) {
         severity: "low"
       });
 
-      await sendTelegramAlert(
-        `⚠️ <b>Miiso Sentinel Security Alert! (No Action)</b>\n\n` +
-        `User: <code>${user}</code>\n` +
-        `Token: <code>${record.tokenAddress}</code>\n` +
-        `Spender: <code>${spender}</code>\n` +
-        `Status: <b>Manual Action Required (Monitoring Mode)</b>\n` +
-        `Profile: <b>${profile.toUpperCase()}</b>\n` +
-        `Combined Confidence: <b>${(combinedConfidence * 100).toFixed(1)}%</b>`
-      );
+      await telegramNotifier.notifyThreat({
+        tier: 3,
+        user,
+        token: record.tokenAddress,
+        spender,
+        exposedValue: record.allowance,
+        profile,
+        confidence: combinedConfidence
+      });
     }
   }
 }

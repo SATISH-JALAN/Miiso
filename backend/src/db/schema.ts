@@ -122,3 +122,16 @@ export const approvalCache = pgTable("approval_cache", {
 }, (t) => ({
   userSpenderTokenUnique: unique("user_spender_token_unique").on(t.userAddress, t.spenderAddress, t.tokenAddress)
 }));
+
+// 8. Telegram Links (Wallet to Telegram Chat ID mapping)
+export const telegramLinks = pgTable("telegram_links", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userAddress: text("user_address").notNull().unique(),
+  telegramId: bigint("telegram_id", { mode: "bigint" }).notNull(),
+  username: text("username"),                    // @username for display
+  verified: boolean("verified").default(false).notNull(),
+  nonce: text("nonce"),                          // 6-digit verification code
+  alertsEnabled: boolean("alerts_enabled").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+

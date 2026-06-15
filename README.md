@@ -301,6 +301,46 @@ sequenceDiagram
     User->>MM: Approve SuccessFeeHook (USDC)
     API-->>UI: Protection active
     UI->>API: SSE /api/events/:address
+
+### Telegram Integration
+
+Miiso brings autonomous security directly to your phone via a dedicated Telegram bot. The bot offers real-time threat alerts and interactive inline actions without needing to open the web dashboard.
+
+```mermaid
+sequenceDiagram
+    participant User as 👤 Telegram User
+    participant Bot as Miiso Bot
+    participant DB as Neon Postgres
+    participant Router as Confidence Router
+    participant Relay as 1Shot Relayer
+
+    %% Setup Flow
+    User->>Bot: /link <wallet>
+    Bot->>User: Returns 6-digit code
+    User->>Bot: /verify <code>
+    Bot->>DB: Marks wallet linked
+    Bot->>Bot: Updates in-memory cache
+
+    %% Threat Flow
+    Note over Router: Threat Detected (Tier 2)
+    Router->>Bot: notifyThreat(tier, user, ...)
+    Bot->>User: ⏰ Threat Alert with Inline Buttons
+    
+    %% Action Flow
+    alt User taps ❌ Cancel Revocation
+        User->>Bot: callbackQuery (veto)
+        Bot->>DB: Updates event (vetoCancelled=true)
+        Bot->>Router: Clears staged execution timer
+        Bot->>User: ✅ Revocation Cancelled
+    else User taps ✅ Whitelist Spender
+        User->>Bot: callbackQuery (whitelist)
+        Bot->>DB: Adds spender to user_whitelist
+        Bot->>Router: Clears staged execution timer
+        Bot->>User: ✅ Spender Whitelisted
+    else User does nothing (60s passes)
+        Router->>Relay: Executes approve(0) autonomously
+    end
+```
 ```
 
 ---
