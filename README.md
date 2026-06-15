@@ -23,6 +23,10 @@
   <a href="#getting-started">Getting Started</a>
 </p>
 
+<p align="center">
+  <img src="frontend/public/screenshots/home.jpg" alt="Miiso Home Page" width="800" />
+</p>
+
 ---
 
 ## Overview
@@ -31,10 +35,13 @@
 
 You grant Miiso a single scoped permission: **reset a token approval to zero**. Nothing else. No transfers. No swaps. Enforced on-chain via MetaMask Smart Accounts and ERC-7710 caveats.
 
-```
-Deploy → Detect → Decompile → Analyze → Route → Revoke → Confirm
-         └────────────── under 10 seconds end-to-end ──────────────┘
-```
+<p align="center">
+  <img src="frontend/public/screenshots/defi_security_pipeline.svg" alt="Miiso DeFi Security Pipeline" width="960" />
+</p>
+
+<p align="center">
+  <img src="frontend/public/screenshots/dashboard.jpg" alt="Miiso Protection Dashboard" width="800" />
+</p>
 
 | | |
 |---|---|
@@ -282,6 +289,10 @@ flowchart LR
 
 Security profiles (`safe` · `balanced` · `manual`) adjust tier behavior per user.
 
+<p align="center">
+  <img src="frontend/public/screenshots/alert.jpg" alt="Miiso Threat Detection Alert" width="800" />
+</p>
+
 ### Permission & setup flow
 
 ```mermaid
@@ -303,9 +314,17 @@ sequenceDiagram
     UI->>API: SSE /api/events/:address
 ```
 
+<p align="center">
+  <img src="frontend/public/screenshots/setup.jpg" alt="Miiso Setup Wizard" width="800" />
+</p>
+
 ### Telegram Integration
 
 Miiso brings autonomous security directly to your phone via a dedicated Telegram bot. The bot offers real-time threat alerts and interactive inline actions without needing to open the web dashboard.
+
+<p align="center">
+  <img src="frontend/public/screenshots/telegram.jpg" alt="Miiso Telegram Security Bot" width="360" />
+</p>
 
 ```mermaid
 sequenceDiagram
@@ -533,9 +552,8 @@ A few takeaways from our development journey:
   <img src="https://img.shields.io/badge/Heimdall--rs-Decompiler-F59E0B?style=flat-square" alt="Heimdall-rs" />
 </p>
 
-> Built for: **MetaMask Smart Accounts Kit** × **1Shot API** × **Venice AI** on **Base**
-
 ---
+
 
 <p align="center">
   <img src="frontend/public/miiso-fevicon.png" alt="Miiso" width="48" />
