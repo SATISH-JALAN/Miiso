@@ -7,6 +7,7 @@ docs/
 dist/
 docs/
 .env
+backend/.env
 **/.env
 !.env.example
 backend/.honeypot-address
